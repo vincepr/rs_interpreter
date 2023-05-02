@@ -6,7 +6,7 @@ Features of the Lox language, for a more comprehensive chapter check the book.
 
 ## data types
 - Booleans: with `true || false`
-- Numbers: with int`123` and float `12.3` under the hood
+- Numbers: float under the hood but `12` and `12.3` are valid input
 - Strings: `"whatever"`and the empty string`""`
 - Nil: `nil` the null implementaion for a no value.
 
@@ -149,7 +149,7 @@ b.bread = "breadrolls";
 ```
 
 ### Inheritance
-Single inheritance using `<` operator
+Single inheritance using the `<` operator
 ```
 class Brunch < Breakfast{
     init(meat, drink){
