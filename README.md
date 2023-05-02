@@ -1,6 +1,6 @@
 # Writing an Interpreter with Rust
-The book [Crafting Interpreters](https://craftinginterpreters.com/contents.html) by Robert Nystrom as a guid, i try to venture into a totally new field of Programming.
-- Goal of this project is to write along in Rust, while reading trough the book.
+The book [Crafting Interpreters](https://craftinginterpreters.com/contents.html) by Robert Nystrom as a guide, the goal is to dip my toes into writing a Interpreter an Parser.
+- Goal of this project is to write all code in Rust.
 
 
 ## A rough guide
