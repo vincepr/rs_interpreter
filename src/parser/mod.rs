@@ -1,9 +1,10 @@
 mod expressions;
 use core::panic;
+use std::mem;
 
 use expressions::*;
 
-use crate::token::{Token, TokenType};
+use crate::token::{Token, TokenType as Type};
 
 // The main Interface/APi to interact with to start the parsing process.
 //      from the tokens the lexer provides,
@@ -40,7 +41,7 @@ impl<'a> Parser<'a> {
     }
 
     fn is_at_end(&self) -> bool {
-        self.peek().typ == TokenType::EOF
+        self.peek().typ == Type::EOF
     }
 
 
@@ -52,19 +53,21 @@ impl<'a> Parser<'a> {
         self.previous()
     }
     
-    /// returns true if token is of given type. does not consume token.
-    fn check(&self, typ: TokenType) -> bool {
+    /// checks type of current-token == args. does not consume token.
+    fn check(&mut self, typ: Type) -> bool {
         if self.is_at_end() {
             return false;
         }
-        self.peek().typ == typ
+        let typ_check = &self.peek().typ;
+        // TODO DOES THIS REALLY WORK? CHECK ! *&&, && wtf?
+        mem::discriminant(*&typ_check) == mem::discriminant(*&&typ)    // because String("1") != String("s") otherwise!
     }
 
     /// also known as: match()
     /// - checks if current token of any provided types
     /// - consumes token uppon success
     /// - reports back success -> bool
-    fn expect(&mut self, types: Vec<TokenType>) -> bool {
+    fn expect(&mut self, types: Vec<Type>) -> bool {
         for typ in types {
             if self.check(typ) {
                 self.advance();
@@ -93,11 +96,11 @@ impl<'a> Parser<'a> {
         let mut expr = self.comparison();
 
         // TODO: refactor this with proper enums && equality-> Some(Expr) instead!
-        while self.expect(vec![TokenType::ExclamationEqual, TokenType::EqualEqual]) {
+        while self.expect(vec![Type::ExclamationEqual, Type::EqualEqual]) {
             expr = Expr::Binary(BinaryExpr {
-                left: Some(Box::new(expr)),
+                left: Box::new(expr),
                 token: self.previous().typ.clone(),
-                right: Some(Box::new(self.comparison())),
+                right: Box::new(self.comparison()),
             });
         }
         expr
@@ -107,15 +110,15 @@ impl<'a> Parser<'a> {
         let mut expr = self.term();
 
         while self.expect(vec![
-            TokenType::Greater,
-            TokenType::GreaterEqual,
-            TokenType::Less,
-            TokenType::LessEqual,
+            Type::Greater,
+            Type::GreaterEqual,
+            Type::Less,
+            Type::LessEqual,
         ]) {
             expr = Expr::Binary(BinaryExpr {
-                left: Some(Box::new(expr)),
+                left: Box::new(expr),
                 token: self.previous().typ.clone(),
-                right: Some(Box::new(self.term())),
+                right: Box::new(self.term()),
             });
         }
         expr
@@ -124,11 +127,11 @@ impl<'a> Parser<'a> {
     fn term(&mut self) -> Expr {
         let mut expr = self.factor();
 
-        while self.expect(vec![TokenType::Minus, TokenType::Plus]) {
+        while self.expect(vec![Type::Minus, Type::Plus]) {
             expr = Expr::Binary(BinaryExpr {
-                left: Some(Box::new(expr)),
+                left: Box::new(expr),
                 token: self.previous().typ.clone(),
-                right: Some(Box::new(self.factor())),
+                right: Box::new(self.factor()),
             });
         }
         expr
@@ -137,53 +140,60 @@ impl<'a> Parser<'a> {
     fn factor(&mut self) -> Expr {
         let mut expr = self.unary();
 
-        while self.expect(vec![TokenType::Slash, TokenType::Star]) {
+        while self.expect(vec![Type::Slash, Type::Star]) {
             expr = Expr::Binary(BinaryExpr {
-                left: Some(Box::new(expr)),
+                left: Box::new(expr),
                 token: self.previous().typ.clone(),
-                right: Some(Box::new(self.unary())),
+                right: Box::new(self.unary()),
             });
         }
         expr
     }
 
     fn unary(&mut self) -> Expr {
-        if self.expect(vec![TokenType::Exclamation, TokenType::Minus]){
-            return Expr::Unary(UnaryExpr { token: self.previous().typ.clone(), right: Some(Box::new(self.unary())) })
+        if self.expect(vec![Type::Exclamation, Type::Minus]){
+            return Expr::Unary(UnaryExpr { token: self.previous().typ.clone(), right: Box::new(self.unary()) })
         }
         self.primary()
     }
 
     fn primary(&mut self) -> Expr{
-        if self.expect(vec![TokenType::True]){
-            return Expr::Literal(LiteralExpr {  })
+        if self.expect(vec![Type::True]){
+            return Expr::Literal(LiteralExpr::Boolean(true))
         }
-        if self.expect(vec![TokenType::False]){
-            return Expr::Literal(LiteralExpr {  })
+        if self.expect(vec![Type::False]){
+            return Expr::Literal(LiteralExpr::Boolean(false))
         }
-        if self.expect(vec![TokenType::Nil]){
-            return Expr::Literal(LiteralExpr {  })
-        }
-
-        if self.expect(vec![TokenType::Number(()), TokenType::String(())]){
-            return Expr::Literal(self.previous())
+        if self.expect(vec![Type::Nil]){
+            return Expr::Literal(LiteralExpr::Nil)
         }
 
-        if self.expect(vec![TokenType::OpenParen]) {
+        if self.expect(vec![Type::Number(0.0)]){
+            if let Type::Number(nr) = self.previous().typ{
+                return Expr::Literal(LiteralExpr::Number(nr))
+            }
+        }
+        if self.expect(vec![Type::String("".to_string())]){
+            if let Type::String(str) = &self.previous().typ{
+                return Expr::Literal(LiteralExpr::String(str.clone()))
+            }
+        }
+
+        if self.expect(vec![Type::OpenParen]) {
             let expr = self.expression();   // back to the top and parse what is inside the parenthesis
-            self.consume(TokenType::CloseParen, "Expect closing: ')' after expression.");   // need closing parenthesis
-            return Expr::Grouping(GroupingExpr { expr: Some(Box::new(expr)) })
+            self.consume(Type::CloseParen, "Expect closing: ')' after expression.");   // need closing parenthesis
+            return Expr::Grouping(GroupingExpr { expr: Box::new(expr) })
         }
         // TODO what to do here? Return None probably!
         panic!("END OF Parser.primary() reached WHEN IT SHOULD NOT HAVE, HELP!");
     }
 
     // 
-    fn consume(&self) {
-        if check(typ) {
+    fn consume(&mut self, typ: Type, msg: &str) {
+        if self.check(typ) {
             self.advance();
         }
-
+        panic!("TODO: handle errors properly!")
     }
 
 
@@ -195,9 +205,6 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let tree = UnaryExpr {
-            token: TokenType::And,
-            right: None,
-        };
+
     }
 }

@@ -12,20 +12,23 @@ pub enum Expr {
 }
 
 pub struct BinaryExpr {
-    pub left: Option<Box<Expr>>, // TODO: can we do without the Option? https://github.com/LukeMathWalker/jlox-rs/blob/main/src/parser/ast.rs
+    pub left: Box<Expr>, // TODO: can we do without the Option? https://github.com/LukeMathWalker/jlox-rs/blob/main/src/parser/ast.rs
     pub token: TokenType, // TODO: would be cleaner to have own enum only allowing supported Tokens!
-    pub right: Option<Box<Expr>>,
+    pub right: Box<Expr>,
 }
 
 pub struct UnaryExpr {
     pub token: TokenType, // TODO: would be cleaner to have own enum only allowing supported Tokens!
-    pub right: Option<Box<Expr>>,
+    pub right: Box<Expr>,
 }
 
 pub struct GroupingExpr {
-    pub expr: Option<Box<Expr>>,
+    pub expr: Box<Expr>,
 }
 
-pub struct LiteralExpr {
-    //todo
+pub enum LiteralExpr {
+    Boolean(bool),
+    Nil,
+    String(String),
+    Number(f64),
 }
