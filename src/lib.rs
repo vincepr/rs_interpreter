@@ -6,6 +6,8 @@ use std::io::{self, Write};
 
 use crate::lexer::new_scanner;
 mod lexer;
+mod parser;
+mod token;
 
 pub fn run_prompt() {
     println!("Interpreter running, input a line:");
