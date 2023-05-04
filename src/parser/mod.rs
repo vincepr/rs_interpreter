@@ -44,7 +44,6 @@ impl<'a> Parser<'a> {
         self.peek().typ == Type::EOF
     }
 
-
     /// consume current token(by incrementing current) and returns reference to it
     fn advance(&mut self) -> &Token {
         if !self.is_at_end() {
@@ -52,7 +51,7 @@ impl<'a> Parser<'a> {
         }
         self.previous()
     }
-    
+
     /// checks type of current-token == args. does not consume token.
     fn check(&mut self, typ: Type) -> bool {
         if self.is_at_end() {
@@ -60,7 +59,7 @@ impl<'a> Parser<'a> {
         }
         let typ_check = &self.peek().typ;
         // TODO DOES THIS REALLY WORK? CHECK ! *&&, && wtf?
-        mem::discriminant(*&typ_check) == mem::discriminant(*&&typ)    // because String("1") != String("s") otherwise!
+        mem::discriminant(*&typ_check) == mem::discriminant(*&&typ) // because String("1") != String("s") otherwise!
     }
 
     /// also known as: match()
@@ -151,52 +150,55 @@ impl<'a> Parser<'a> {
     }
 
     fn unary(&mut self) -> Expr {
-        if self.expect(vec![Type::Exclamation, Type::Minus]){
-            return Expr::Unary(UnaryExpr { token: self.previous().typ.clone(), right: Box::new(self.unary()) })
+        if self.expect(vec![Type::Exclamation, Type::Minus]) {
+            return Expr::Unary(UnaryExpr {
+                token: self.previous().typ.clone(),
+                right: Box::new(self.unary()),
+            });
         }
         self.primary()
     }
 
-    fn primary(&mut self) -> Expr{
-        if self.expect(vec![Type::True]){
-            return Expr::Literal(LiteralExpr::Boolean(true))
+    fn primary(&mut self) -> Expr {
+        if self.expect(vec![Type::True]) {
+            return Expr::Literal(LiteralExpr::Boolean(true));
         }
-        if self.expect(vec![Type::False]){
-            return Expr::Literal(LiteralExpr::Boolean(false))
+        if self.expect(vec![Type::False]) {
+            return Expr::Literal(LiteralExpr::Boolean(false));
         }
-        if self.expect(vec![Type::Nil]){
-            return Expr::Literal(LiteralExpr::Nil)
+        if self.expect(vec![Type::Nil]) {
+            return Expr::Literal(LiteralExpr::Nil);
         }
 
-        if self.expect(vec![Type::Number(0.0)]){
-            if let Type::Number(nr) = self.previous().typ{
-                return Expr::Literal(LiteralExpr::Number(nr))
+        if self.expect(vec![Type::Number(0.0)]) {
+            if let Type::Number(nr) = self.previous().typ {
+                return Expr::Literal(LiteralExpr::Number(nr));
             }
         }
-        if self.expect(vec![Type::String("".to_string())]){
-            if let Type::String(str) = &self.previous().typ{
-                return Expr::Literal(LiteralExpr::String(str.clone()))
+        if self.expect(vec![Type::String("".to_string())]) {
+            if let Type::String(str) = &self.previous().typ {
+                return Expr::Literal(LiteralExpr::String(str.clone()));
             }
         }
 
         if self.expect(vec![Type::OpenParen]) {
-            let expr = self.expression();   // back to the top and parse what is inside the parenthesis
-            self.consume(Type::CloseParen, "Expect closing: ')' after expression.");   // need closing parenthesis
-            return Expr::Grouping(GroupingExpr { expr: Box::new(expr) })
+            let expr = self.expression(); // back to the top and parse what is inside the parenthesis
+            self.consume(Type::CloseParen, "Expect closing: ')' after expression."); // need closing parenthesis
+            return Expr::Grouping(GroupingExpr {
+                expr: Box::new(expr),
+            });
         }
         // TODO what to do here? Return None probably!
         panic!("END OF Parser.primary() reached WHEN IT SHOULD NOT HAVE, HELP!");
     }
 
-    // 
+    //
     fn consume(&mut self, typ: Type, msg: &str) {
         if self.check(typ) {
             self.advance();
         }
         panic!("TODO: handle errors properly!")
     }
-
-
 }
 
 #[cfg(test)]
@@ -204,7 +206,5 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-
-    }
+    fn it_works() {}
 }
