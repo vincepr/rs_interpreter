@@ -1,21 +1,16 @@
 /*
-    Scanner/Tokenizer and adjacent functions/structs
+    Scanner/Lexer/Tokenizer and adjacent functions/structs
 */
 //      String              ->          Lexemes
 // var language = "lox";    ->   [ var | language | = | "lox" | ; ]
 
 use lazy_static::lazy_static;
 use std::collections::HashMap;
-use std::fmt;
 
-use crate::token::{Token, TokenType};
-
-// Lexer Errors, maybe pull that up to the core-lib and use everyplace
-#[derive(Debug)]
-struct Err {
-    line: usize,
-    msg: &'static str,
-}
+use crate::{
+    token::{Token, TokenType},
+    Err,
+};
 
 #[derive(Debug)]
 pub struct Scanner<'a> {
@@ -30,7 +25,7 @@ pub struct Scanner<'a> {
 }
 
 pub fn new_scanner(source: &str) -> Scanner {
-    Scanner {
+    let mut s = Scanner {
         source: source,
         source_arr: source.chars().collect(),
         //iterator: source.char_indices(),
@@ -39,12 +34,19 @@ pub fn new_scanner(source: &str) -> Scanner {
         start: 0,   // offsets that index into the string
         current: 0, // offsets that index into the string
         line: 1,
-    }
+    };
+    s.scan_all_tokens();
+    s
 }
 
 impl<'a> Scanner<'a> {
+    /// returns the created "Array" of Tokens to pass on to the Parser
+    pub fn results(&self) -> (&Vec<Token>, Vec<Err>) {
+        return (&self.tokens, self.errors.clone());
+    }
+
     // "consumes" the Sourcecode to spit out tokens.
-    pub fn scan_all_tokens(&mut self) {
+    fn scan_all_tokens(&mut self) {
         while !self.is_at_end() {
             // we are at the start of the next lexeme:
             self.start = self.current;
@@ -111,10 +113,8 @@ impl<'a> Scanner<'a> {
                     // word -> Identifier || Reserved-Word
                     self.identifier_literal();
                 } else {
-                    self.errors.push(Err {
-                        line: self.line,
-                        msg: "Unexpected character",
-                    })
+                    self.errors
+                        .push(Err::Lexer("Unexpected character".to_string(), self.line));
                 }
             }
         }
@@ -176,10 +176,8 @@ impl<'a> Scanner<'a> {
             self.advance_char();
         }
         if self.is_at_end() {
-            self.errors.push(Err {
-                line: self.line,
-                msg: "Unterminated string",
-            });
+            self.errors
+                .push(Err::Lexer("Unterminated string".to_string(), self.line));
             return;
         }
         self.advance_char(); // consume the closing "
@@ -202,10 +200,10 @@ impl<'a> Scanner<'a> {
         }
         let s = &self.source[self.start..self.current];
         let number = s.parse::<f64>().unwrap_or_else(|_| {
-            self.errors.push(Err {
-                line: self.line,
-                msg: "Failed to Parse Number->Float, used default value 0.0 instead!",
-            });
+            self.errors.push(Err::Lexer(
+                "Failed to Parse Number->Float, used default value 0.0 instead!".to_string(),
+                self.line,
+            ));
             return 0.0;
         });
         self.add_token(TokenType::Number(number));

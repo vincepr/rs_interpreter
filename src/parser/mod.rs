@@ -1,31 +1,59 @@
 mod expressions;
-use core::panic;
 use std::mem;
 
 use expressions::*;
 
-use crate::token::{Token, TokenType as Type};
+use crate::{
+    token::{Token, TokenType as Type},
+    Err,
+};
 
 // The main Interface/APi to interact with to start the parsing process.
-//      from the tokens the lexer provides,
-//      that are just in a flat row.
-pub struct SyntaxTree {
-    errs: Vec<String>, // Error messages TODO: implement when we can test
+// holds the Tree structure that represents our Code-Logic
+#[derive(Debug)]
+pub struct AST {
+    pub errors: Vec<Err>, // Error messages TODO: implement when we can test
     root: Expr,
-    is_eof: bool,
 }
-impl SyntaxTree {
-    pub fn parse(tokens: Vec<Token>) {
-        //let parser = Parser{};
-        //return parser.Parse();
+impl AST {
+    /// parses a new AST (Abstract-Syntax-Tree) from a flat array of Token provided by the lexer/scanner
+    pub fn new(tokens: &Vec<Token>) -> AST {
+        let mut new_ast = Self {
+            errors: vec![],
+            root: Expr::ErrorExpr,
+        };
+        new_ast.parse(tokens);
+        new_ast
+    }
+    fn parse(&mut self, tokens: &Vec<Token>) {
+        let mut parser = Parser::new(tokens);
+        self.root = parser.parse();
+        self.errors = parser.errors;
+    }
+    /// print out a representation of the AST. for debuging etc.
+    pub fn print(&self) -> String {
+        return self.root.to_string();
     }
 }
 
 struct Parser<'a> {
-    tokens: Vec<Token<'a>>,
+    tokens: &'a Vec<Token<'a>>,
     current: usize,
-    //TODO-check idea: combine the above into iterator? -> then add previous:Token and current:Token for example?
+    errors: Vec<Err>,
 }
+impl<'a> Parser<'a> {
+    fn new(tokens: &'a Vec<Token>) -> Self {
+        Self {
+            tokens,
+            current: 0,
+            errors: vec![],
+        }
+    }
+    fn parse(&mut self) -> Expr {
+        self.expression()
+    }
+}
+
 /*
         Helpers
 */
@@ -58,7 +86,7 @@ impl<'a> Parser<'a> {
             return false;
         }
         let typ_check = &self.peek().typ;
-        // TODO DOES THIS REALLY WORK? CHECK ! *&&, && wtf?
+        // TODO DOES THIS REALLY WORK? To-CHECK! *&&, && wtf?
         mem::discriminant(*&typ_check) == mem::discriminant(*&&typ) // because String("1") != String("s") otherwise!
     }
 
@@ -160,51 +188,46 @@ impl<'a> Parser<'a> {
     }
 
     fn primary(&mut self) -> Expr {
-        if self.expect(vec![Type::True]) {
-            return Expr::Literal(LiteralExpr::Boolean(true));
-        }
-        if self.expect(vec![Type::False]) {
-            return Expr::Literal(LiteralExpr::Boolean(false));
-        }
-        if self.expect(vec![Type::Nil]) {
-            return Expr::Literal(LiteralExpr::Nil);
-        }
-
-        if self.expect(vec![Type::Number(0.0)]) {
-            if let Type::Number(nr) = self.previous().typ {
-                return Expr::Literal(LiteralExpr::Number(nr));
+        self.advance();
+        match &self.previous().typ {
+            Type::True => Expr::Literal(LiteralExpr::Boolean(true)),
+            Type::False => Expr::Literal(LiteralExpr::Boolean(false)),
+            Type::Nil => Expr::Literal(LiteralExpr::Nil),
+            Type::Number(nr) => Expr::Literal(LiteralExpr::Number(*nr)),
+            Type::String(st) => Expr::Literal(LiteralExpr::String(st.clone())),
+            Type::OpenParen => {
+                let expr = self.expression(); // back to the top and parse what is inside the parenthesis
+                if let Err(e) =
+                    self.consume(Type::CloseParen, "Expect closing: ')' after expression.")
+                {
+                    self.errors.push(e);
+                }; // need closing parenthesis
+                Expr::Grouping(GroupingExpr {
+                    expr: Box::new(expr),
+                })
             }
-        }
-        if self.expect(vec![Type::String("".to_string())]) {
-            if let Type::String(str) = &self.previous().typ {
-                return Expr::Literal(LiteralExpr::String(str.clone()));
-            }
-        }
 
-        if self.expect(vec![Type::OpenParen]) {
-            let expr = self.expression(); // back to the top and parse what is inside the parenthesis
-            self.consume(Type::CloseParen, "Expect closing: ')' after expression."); // need closing parenthesis
-            return Expr::Grouping(GroupingExpr {
-                expr: Box::new(expr),
-            });
+            _ => Expr::ErrorExpr,
         }
-        // TODO what to do here? Return None probably!
-        panic!("END OF Parser.primary() reached WHEN IT SHOULD NOT HAVE, HELP!");
     }
 
-    //
-    fn consume(&mut self, typ: Type, msg: &str) {
-        if self.check(typ) {
-            self.advance();
+    /// We expect the Type (advance and return expr if so). Ff not we return an error.
+    fn consume(&mut self, typ: Type, msg: &str) -> Result<&Token, Err> {
+        // TODO if we actually use ErrorExpr instead of Result<Expr>
+        // we should self.errors.push(e) in here not upstream!
+        // and then just return a Option<&Token>
+        match self.check(typ) {
+            true => Ok(self.advance()),
+            false => Err(Err::Parser(msg.to_string(), self.peek().line)),
         }
-        panic!("TODO: handle errors properly!")
     }
 }
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
-    fn it_works() {}
+    fn testing() {}
 }
