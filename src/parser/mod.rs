@@ -22,11 +22,13 @@ impl AST {
         new_ast.parse(tokens);
         new_ast
     }
+
     fn parse(&mut self, tokens: &Vec<Token>) {
         let mut parser = Parser::new(tokens);
         self.root = parser.parse();
         self.errors = parser.errors;
     }
+
     /// print out a representation of the AST. for debuging etc.
     pub fn print(&self) -> String {
         return self.root.to_string();
@@ -46,6 +48,7 @@ impl<'a> Parser<'a> {
             errors: vec![],
         }
     }
+
     fn parse(&mut self) -> Expr {
         self.expression()
     }
@@ -232,12 +235,79 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
+    
+    use crate::lexer::new_scanner;
+    use crate::types::TokenType;
 
-    // use super::*;
+    use super::*;
 
-    // #[test]
-    // fn basic_expressions() {
-    //     // let tokens = vec![]
-    //     // let p = Parser::new(tokens);
-    // }
+    // helper for testing:
+    fn _fake_tokens(data: Vec<(&str, TokenType)>) -> Vec<Token> {
+        data.iter()
+            .map(|(lexeme, typ)| Token{typ: typ.clone(), lexeme, line:1})
+            .chain(vec![Token{typ:TokenType::EOF, lexeme:"", line:1,}])
+            .collect()
+    }
+
+    #[test]
+    fn integration_test_with_lexer() {
+        // AST: <true == false>
+        let s = new_scanner("true == false;");
+        let (tokens, lexer_errs) = s.results();
+        assert!(lexer_errs.len() == 0);
+        let ast = AST::new(tokens);
+
+        let expected = Expr::Binary(BinaryExpr {
+            left: Box::new(Expr::Literal(LiteralExpr::Boolean(true))),
+            token: TokenType::EqualEqual,
+            right: Box::new(Expr::Literal(LiteralExpr::Boolean(false))),
+        });
+        assert_eq!(ast.root, expected);
+        assert!(ast.errors.len() == 0);
+    }
+
+    #[test]
+    fn integration_test_mult_before_add() {
+        // AST: <1 + <2 * 3>>
+        let s = new_scanner("1+2*3");
+        let (tokens, lexer_errs) = s.results();
+        assert!(lexer_errs.len() == 0);
+        let ast = AST::new(tokens);
+
+        let expected = Expr::Binary(BinaryExpr {
+            left: Box::new(Expr::Literal(LiteralExpr::Number(1.0))),
+            token: Type::Plus,
+            right: Box::new(Expr::Binary(BinaryExpr {
+                left: Box::new(Expr::Literal(LiteralExpr::Number(2.0))),
+                token: Type::Star,
+                right: Box::new(Expr::Literal(LiteralExpr::Number(3.0))),
+            })),
+        });
+
+        assert_eq!(ast.root, expected);
+        assert!(ast.errors.len() == 0);
+    }
+
+    #[test]
+    fn integration_test_parenthesis() {
+        // AST: <(<1 + 2>) * 3>
+        let s = new_scanner("(1-2)/3");
+        let (tokens, lexer_errs) = s.results();
+        assert!(lexer_errs.len() == 0);
+        let ast = AST::new(tokens);
+
+        let expected = Expr::Binary(BinaryExpr {
+            left: Box::new(Expr::Grouping(GroupingExpr {
+                expr: Box::new(Expr::Binary(BinaryExpr {
+                    left: Box::new(Expr::Literal(LiteralExpr::Number(1.0))),
+                    token: Type::Minus,
+                    right: Box::new(Expr::Literal(LiteralExpr::Number(2.0))),
+                })),
+            })),
+            token: Type::Slash,
+            right: Box::new(Expr::Literal(LiteralExpr::Number(3.0))),
+        });
+        assert_eq!(ast.root, expected);
+        assert!(ast.errors.len() == 0);
+    }
 }
