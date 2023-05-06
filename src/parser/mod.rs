@@ -5,11 +5,16 @@ use expressions::*;
 
 use crate::types::{Err, Token, TokenType as Type};
 
-// The main Interface/APi to interact with to start the parsing process.
-// holds the Tree structure that represents our Code-Logic
+/*
+    The AST. Abstract-Syntax-Tree is the exposed part of this module.
+        - holds Data representing the logical Syntax that make up our programm.
+        - Tree Structure with different enum-expressions
+*/
+
+/// The main Interface/APi to interact with to start the parsing process.
 #[derive(Debug)]
 pub struct AST {
-    pub errors: Vec<Err>, // Error messages TODO: implement when we can test
+    pub errors: Vec<Err>,
     root: Expr,
 }
 impl AST {
@@ -29,7 +34,7 @@ impl AST {
         self.errors = parser.errors;
     }
 
-    /// print out a representation of the AST. for debuging etc.
+    /// pretty-print a representation of the AST. "(1+3)*3" becomes <(<1 + 2>) * 3>
     pub fn print(&self) -> String {
         return self.root.to_string();
     }
@@ -107,11 +112,13 @@ impl<'a> Parser<'a> {
 
 /*
         The Grammar rules sorted by precedence
-   PrioToCheck
-        1       ==  !=
-        2       >   >=  <   <=
-        3       -   +               (as factor) ex -(3) -> -3
-        check documentation/Parser.md for the full list.
+ PrioToCheck:
+            1       ==  !=              equality()      ex: true != false
+            2       >   >=  <   <=      comparison()    ex: 3>2
+            3       +   -               term()          ex: 1+2-3
+            4       *   /               factor()        ex: 1*3  or 10/5
+            5       -   !               unary()         ex: -(3) or !false
+            6       ()  true,false...   primary()       ex: Number(1.2) or "string" or (...) or nil
 */
 
 impl<'a> Parser<'a> {
@@ -233,9 +240,13 @@ impl<'a> Parser<'a> {
     }
 }
 
+/*
+    Testing:
+*/
+
 #[cfg(test)]
 mod tests {
-    
+
     use crate::lexer::new_scanner;
     use crate::types::TokenType;
 
@@ -244,8 +255,16 @@ mod tests {
     // helper for testing:
     fn _fake_tokens(data: Vec<(&str, TokenType)>) -> Vec<Token> {
         data.iter()
-            .map(|(lexeme, typ)| Token{typ: typ.clone(), lexeme, line:1})
-            .chain(vec![Token{typ:TokenType::EOF, lexeme:"", line:1,}])
+            .map(|(lexeme, typ)| Token {
+                typ: typ.clone(),
+                lexeme,
+                line: 1,
+            })
+            .chain(vec![Token {
+                typ: TokenType::EOF,
+                lexeme: "",
+                line: 1,
+            }])
             .collect()
     }
 
