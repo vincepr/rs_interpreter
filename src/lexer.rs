@@ -7,10 +7,7 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 
-use crate::{
-    token::{Token, TokenType},
-    Err,
-};
+use crate::types::{Err, Token, TokenType};
 
 #[derive(Debug)]
 pub struct Scanner<'a> {
@@ -77,22 +74,22 @@ impl<'a> Scanner<'a> {
             '+' => self.add_token(TokenType::Plus),
             ';' => self.add_token(TokenType::Semicolon),
             '*' => self.add_token(TokenType::Star),
-            // 1-2 char long
+            // 1-2 char long combinations:
             '!' => match self.check_for('=') {
-                true => self.add_token(TokenType::Exclamation),
-                false => self.add_token(TokenType::ExclamationEqual),
+                true => self.add_token(TokenType::ExclamationEqual),
+                false => self.add_token(TokenType::Exclamation),
             },
             '=' => match self.check_for('=') {
-                true => self.add_token(TokenType::Equal),
-                false => self.add_token(TokenType::EqualEqual),
+                true => self.add_token(TokenType::EqualEqual),
+                false => self.add_token(TokenType::Equal),
             },
             '<' => match self.check_for('=') {
-                true => self.add_token(TokenType::Less),
-                false => self.add_token(TokenType::LessEqual),
+                true => self.add_token(TokenType::LessEqual),
+                false => self.add_token(TokenType::Less),
             },
             '>' => match self.check_for('=') {
-                true => self.add_token(TokenType::Greater),
-                false => self.add_token(TokenType::GreaterEqual),
+                true => self.add_token(TokenType::GreaterEqual),
+                false => self.add_token(TokenType::Greater),
             },
             '/' => match self.check_for('/') {
                 true => self.skip_line(),
@@ -127,7 +124,6 @@ impl<'a> Scanner<'a> {
     }
 
     fn add_token(&mut self, token: TokenType) {
-        // this whole text implementation sucks but i want it for debugging atm:
         let lexeme = &self.source[self.start..self.current];
         self.tokens.push(Token {
             typ: token,
@@ -244,4 +240,188 @@ lazy_static! {
         map.insert("while", TokenType::While);
         map
     };
+}
+
+/*
+    Some unit tests for the Lexer as a whole:
+*/
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // helpers for testing:
+    fn _fake_token(lexeme: &str, token: TokenType) -> Token {
+        Token {
+            typ: token,
+            lexeme,
+            line: 1,
+        }
+    }
+    fn _fake_data(data: Vec<(&str, TokenType)>) -> Vec<Token> {
+        let eof = vec![_fake_token("", TokenType::EOF)].into_iter();
+        data.iter()
+            .map(|(lex, tok)| _fake_token(lex, tok.clone()))
+            .chain(eof)
+            .collect()
+    }
+    fn _is_expected(input: &str, expected: Vec<(&str, TokenType)>) {
+        let s = new_scanner(input);
+        let (tokens, errs) = s.results();
+        let expected = _fake_data(expected);
+        assert!(errs.len() == 0);
+        assert_eq!(tokens, &expected);
+    }
+
+    #[test]
+    fn one_chars_longs() {
+        _is_expected("", vec![]); // only an eof token!
+        _is_expected(";", vec![(";", TokenType::Semicolon)]);
+        _is_expected("-", vec![("-", TokenType::Minus)]);
+    }
+
+    #[test]
+    fn braces() {
+        _is_expected(
+            "{)(}",
+            vec![
+                ("{", TokenType::OpenBrace),
+                (")", TokenType::CloseParen),
+                ("(", TokenType::OpenParen),
+                ("}", TokenType::CloseBrace),
+            ],
+        );
+    }
+
+    #[test]
+    fn two_char_longs() {
+        _is_expected(
+            "1=2",
+            vec![
+                ("1", TokenType::Number(1.0)),
+                ("=", TokenType::Equal),
+                ("2", TokenType::Number(2.0)),
+            ],
+        );
+        _is_expected(
+            "true== false",
+            vec![
+                ("true", TokenType::True),
+                ("==", TokenType::EqualEqual),
+                ("false", TokenType::False),
+            ],
+        );
+        _is_expected(
+            "-05 !=00232.5",
+            vec![
+                ("-", TokenType::Minus),
+                ("05", TokenType::Number(5.0)),
+                ("!=", TokenType::ExclamationEqual),
+                ("00232.5", TokenType::Number(232.5)),
+            ],
+        );
+        _is_expected(
+            "true==!false",
+            vec![
+                ("true", TokenType::True),
+                ("==", TokenType::EqualEqual),
+                ("!", TokenType::Exclamation),
+                ("false", TokenType::False),
+            ],
+        );
+        _is_expected(
+            "return 1 / 2 // somecomment is NOT token/ // all ignored",
+            vec![
+                ("return", TokenType::Return),
+                ("1", TokenType::Number(1.0)),
+                ("/", TokenType::Slash),
+                ("2", TokenType::Number(2.0)),
+            ],
+        );
+    }
+
+    #[test]
+    fn literals() {
+        _is_expected(
+            "var name_varname = 5.5; this.thisname++",
+            vec![
+                ("var", TokenType::Var),
+                ("name_varname", TokenType::Identifier),
+                ("=", TokenType::Equal),
+                ("5.5", TokenType::Number(5.5)),
+                (";", TokenType::Semicolon),
+                ("this", TokenType::This),
+                (".", TokenType::Dot),
+                ("thisname", TokenType::Identifier),
+                ("+", TokenType::Plus),
+                ("+", TokenType::Plus),
+            ],
+        );
+    }
+
+    #[test]
+    fn newlines_and_whitespace() {
+        let s = new_scanner("var \n return \t \n //ignored +-+ \n ;");
+        let (tokens, errs) = s.results();
+        let expected = vec![
+            Token {
+                typ: TokenType::Var,
+                lexeme: "var",
+                line: 1,
+            },
+            Token {
+                typ: TokenType::Return,
+                lexeme: "return",
+                line: 2,
+            },
+            Token {
+                typ: TokenType::Semicolon,
+                lexeme: ";",
+                line: 4,
+            },
+            Token {
+                typ: TokenType::EOF,
+                lexeme: "",
+                line: 4,
+            },
+        ];
+        assert!(errs.len() == 0);
+        assert_eq!(tokens, &expected);
+    }
+
+    // With error messages:
+    #[test]
+    fn failed_to_parse_number(){
+
+    }
+    #[test]
+    fn unterminated_string_error(){
+        _is_expected(
+            " var parser = \"working\" ;",
+            vec![
+                ("var", TokenType::Var),
+                ("parser", TokenType::Identifier),
+                ("=", TokenType::Equal),
+                ("\"working\"", TokenType::String("working".to_string())),
+                (";", TokenType::Semicolon),
+            ],
+        );
+        // now without closing the string:
+        let s = new_scanner(" var parser = \"notworking ; nothing after unterminated quotes should get reached");
+        let (tokens, errs) = s.results();
+        let expected = _fake_data(vec![
+            ("var", TokenType::Var),
+            ("parser", TokenType::Identifier),
+            ("=", TokenType::Equal),
+        ]);
+
+        assert_eq!(1, errs.len());
+        assert_eq!(tokens, &expected);
+    }
+    #[test]
+    fn unexpected_character_error(){
+        let s = new_scanner("#? v_a_r_ok _varNotOk");
+        let (_tokens, errs) = s.results();
+        assert_eq!(3, errs.len());
+    }
 }

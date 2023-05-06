@@ -3,10 +3,7 @@ use std::mem;
 
 use expressions::*;
 
-use crate::{
-    token::{Token, TokenType as Type},
-    Err,
-};
+use crate::types::{Err, Token, TokenType as Type};
 
 // The main Interface/APi to interact with to start the parsing process.
 // holds the Tree structure that represents our Code-Logic
@@ -200,6 +197,7 @@ impl<'a> Parser<'a> {
                 if let Err(e) =
                     self.consume(Type::CloseParen, "Expect closing: ')' after expression.")
                 {
+                    //panic!("here");
                     self.errors.push(e);
                 }; // need closing parenthesis
                 Expr::Grouping(GroupingExpr {
@@ -207,7 +205,16 @@ impl<'a> Parser<'a> {
                 })
             }
 
-            _ => Expr::ErrorExpr,
+            _ => {
+                // cant parse sucessuflly
+                self.errors.push(Err::Parser(
+                    "Unexpected token <".to_string()
+                        + &self.previous().to_string()
+                        + "> ! parser.primary() failed.",
+                    self.peek().line,
+                ));
+                Expr::ErrorExpr
+            }
         }
     }
 
@@ -226,8 +233,11 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
 
-    use super::*;
+    // use super::*;
 
-    #[test]
-    fn testing() {}
+    // #[test]
+    // fn basic_expressions() {
+    //     // let tokens = vec![]
+    //     // let p = Parser::new(tokens);
+    // }
 }

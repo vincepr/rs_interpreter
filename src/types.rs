@@ -1,7 +1,33 @@
 use std::fmt;
 
+/*
+    Basic collection types that get passed arround between module-borders.
+*/
+
+// Possible Errors get defined by this
+#[derive(Debug, Clone)]
+pub enum Err {
+    // WhatFailed (Error-message, line-of-error)
+    //      TODO: could change to point to character/byte of error
+    //      -> re-evaluate to line && character in line
+    Parser(String, usize),
+    Lexer(String, usize),
+}
+impl std::fmt::Display for Err {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Err::Lexer(message, line) => {
+                f.write_fmt(format_args!("Lexer-ERROR in line: {line} : {message}!"))
+            }
+            Err::Parser(message, line) => {
+                f.write_fmt(format_args!("ParserERROR in line: {line} : {message}!"))
+            }
+        }
+    }
+}
+
 // The Tokens that get created at the lexer then passed over to the parser
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Token<'a> {
     pub typ: TokenType,
     pub lexeme: &'a str,
@@ -12,7 +38,7 @@ impl fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "typ: <{}> lexeme: <{}> line:<{}>",
+            "{}<-token | lexeme->{} | line:{}",
             self.typ, self.lexeme, self.line
         )
     }
@@ -44,10 +70,11 @@ pub enum TokenType {
     EOF,
 }
 
-// We need Display-Trait for proper error messages or AST-Tree logging.
+// We need Display-Trait for proper error messages or AST-Tree logging...
 impl fmt::Display for TokenType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
+            // DEBUG MODE: TODO remove this line to make below reachable again
             TokenType::OpenParen => f.write_str("("),
             TokenType::CloseParen => f.write_str(")"),
             TokenType::OpenBrace => f.write_str("{"),
@@ -69,7 +96,9 @@ impl fmt::Display for TokenType {
             TokenType::Less => f.write_str("<"),
             TokenType::LessEqual => f.write_str("<="),
 
-            TokenType::Identifier => f.write_str("TODO Display for IDENTIFIER"),
+            TokenType::Identifier => {
+                f.write_str("TODO: Display for IDENTIFIER in types.TokenType.Display")
+            }
             TokenType::String(s) => f.write_str(s),
             TokenType::Number(n) => n.fmt(f),
 

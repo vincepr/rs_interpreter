@@ -1,4 +1,4 @@
-use crate::token::TokenType;
+use crate::types::TokenType;
 
 // interface for all Expressions. They are the building blocks of our AST
 // We expose those to our backend-parser AND frontend-lexxer
@@ -57,9 +57,8 @@ impl std::fmt::Display for Expr {
                 f.write_fmt(format_args!("<{token} {right}>"))
             }
             Expr::Grouping(GroupingExpr { expr }) => f.write_fmt(format_args!("({expr})")),
-
             //Failback to Debug-Printing for unimplemented ones:
-            _ => write!(f, "{:?}", self),
+            //_ => write!(f, "{:?}", self),
         }
     }
 }
