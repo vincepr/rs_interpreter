@@ -389,13 +389,8 @@ mod tests {
         assert_eq!(tokens, &expected);
     }
 
-    // With error messages:
     #[test]
-    fn failed_to_parse_number(){
-
-    }
-    #[test]
-    fn unterminated_string_error(){
+    fn unterminated_string_error() {
         _is_expected(
             " var parser = \"working\" ;",
             vec![
@@ -407,7 +402,9 @@ mod tests {
             ],
         );
         // now without closing the string:
-        let s = new_scanner(" var parser = \"notworking ; nothing after unterminated quotes should get reached");
+        let s = new_scanner(
+            " var parser = \"notworking ; nothing after unterminated quotes should get reached",
+        );
         let (tokens, errs) = s.results();
         let expected = _fake_data(vec![
             ("var", TokenType::Var),
@@ -419,7 +416,7 @@ mod tests {
         assert_eq!(tokens, &expected);
     }
     #[test]
-    fn unexpected_character_error(){
+    fn unexpected_character_error() {
         let s = new_scanner("#? v_a_r_ok _varNotOk");
         let (_tokens, errs) = s.results();
         assert_eq!(3, errs.len());
