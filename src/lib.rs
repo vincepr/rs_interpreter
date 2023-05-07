@@ -4,10 +4,12 @@
 
 use std::io::{self, Write};
 
-use crate::{lexer::new_scanner, parser::AST};
+use crate::{lexer::new_scanner, parser::AST, interpreter::Evaluates};
 mod lexer;
 mod parser;
 mod types;
+mod expressions;
+mod interpreter;
 
 pub fn run_prompt() {
     println!("Interpreter running, input a line:");
@@ -41,12 +43,9 @@ fn run(input: String) {
     // print out the AST:
     println!("AST: {}", ast.print());
 
-    // for er in errors {
-    //     println!("L->{}", er.to_string());
-    // }
-    // for er in ast.errors {
-    //     println!("P->{}", er.to_string());
-    // }
+    let expr = ast.root;
+    let result = interpreter::interpret(expr);
+    println!("{result}");
 
     // join errors together:
     errors.extend(ast.errors);

@@ -1,7 +1,7 @@
 use crate::types::TokenType;
 
 // interface for all Expressions. They are the building blocks of our AST
-// We expose those to our backend-parser AND frontend-lexxer
+// We expose those to our backend-interpreter AND middle-parser
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
@@ -12,7 +12,9 @@ pub enum Expr {
     Unary(UnaryExpr),
     Grouping(GroupingExpr),
     Literal(LiteralExpr),
+    //RuntimeErr(String)    // TODO: properly map error msgs that can happen at runtime (ex wront casts etc.)
 }
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BinaryExpr {
@@ -62,3 +64,6 @@ impl std::fmt::Display for Expr {
         }
     }
 }
+
+
+

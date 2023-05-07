@@ -1,9 +1,8 @@
-mod expressions;
 use std::mem;
 
-use expressions::*;
 
-use crate::types::{Err, Token, TokenType as Type};
+
+use crate::{types::{Err, Token, TokenType as Type}, expressions::{Expr, BinaryExpr, LiteralExpr, UnaryExpr, GroupingExpr}};
 
 /*
     The AST. Abstract-Syntax-Tree is the exposed part of this module.
@@ -15,7 +14,7 @@ use crate::types::{Err, Token, TokenType as Type};
 #[derive(Debug)]
 pub struct AST {
     pub errors: Vec<Err>,
-    root: Expr,
+    pub root: Expr,
 }
 impl AST {
     /// parses a new AST (Abstract-Syntax-Tree) from a flat array of Token provided by the lexer/scanner
