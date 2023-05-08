@@ -1,4 +1,6 @@
-use crate::types::TokenType;
+use std::fmt::Write;
+
+use crate::{interpreter::RunErr, types::TokenType};
 
 // interface for all Expressions. They are the building blocks of our AST
 // We expose those to our backend-interpreter AND middle-parser
@@ -12,9 +14,8 @@ pub enum Expr {
     Unary(UnaryExpr),
     Grouping(GroupingExpr),
     Literal(LiteralExpr),
-    //RuntimeErr(String)    // TODO: properly map error msgs that can happen at runtime (ex wront casts etc.)
+    RuntimeErr(RunErr), // TODO: properly map error msgs that can happen at runtime (ex wront casts etc.)
 }
-
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct BinaryExpr {
@@ -59,11 +60,9 @@ impl std::fmt::Display for Expr {
                 f.write_fmt(format_args!("<{token} {right}>"))
             }
             Expr::Grouping(GroupingExpr { expr }) => f.write_fmt(format_args!("({expr})")),
+            Expr::RuntimeErr(e) => write!(f, "RuntimeErr({:?})", e),
             //Failback to Debug-Printing for unimplemented ones:
             //_ => write!(f, "{:?}", self),
         }
     }
 }
-
-
-

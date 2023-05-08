@@ -1,9 +1,22 @@
 use crate::{expressions::*, types::TokenType};
 
-
-
-pub fn interpret(input: Expr) -> Expr{
+/// Takes the root of the AST and evaluates it down to a result. 
+pub fn interpret(input: Expr) -> Expr {
     input.evaluated()
+}
+
+/// Errors that happen at runtime: Ex at evaluating an Expression, trying to divide by 0;
+#[derive(Debug, Clone, PartialEq)]
+pub enum RunErr {
+    NotImplementedUnaryExpr,
+    NotImplementedBinaryExpr,
+    FailedAddition,
+    FailedEqual,
+    FailedDivision,
+    FailedDivisionByZero,
+    FailedMultiplication,
+    FailedComparison,
+    FailedSubtraction,
 }
 
 // interface to evaluate our expressions. (1+3 resolves to 4) => we keep 4 "and throw the rest away"
@@ -13,7 +26,8 @@ pub trait Evaluates {
 
 impl Evaluates for Expr {
     fn evaluated(&self) -> Self {
-        match self{
+        match self {
+            Expr::RuntimeErr(e) => Expr::RuntimeErr(e.clone()),
             Expr::ErrorExpr => Expr::ErrorExpr,
             Expr::Literal(expr) => expr.evaluated(),
             Expr::Grouping(expr) => expr.evaluated(),
@@ -25,7 +39,7 @@ impl Evaluates for Expr {
 
 impl Evaluates for LiteralExpr {
     fn evaluated(&self) -> Expr {
-        return Expr::Literal(self.clone()); // already handled by (impl Evaluates for Expr) but keeping it in for completeness
+        return Expr::Literal(self.clone());
     }
 }
 
@@ -50,7 +64,7 @@ impl Evaluates for UnaryExpr {
             (TokenType::Exclamation, Expr::Literal(LiteralExpr::Nil)) => {
                 Expr::Literal(LiteralExpr::Boolean(true))
             }
-            _ => Expr::ErrorExpr, // TODO: Make sure this Error is handled upstream. Like if -"string" etc.
+            _ => Expr::RuntimeErr(RunErr::NotImplementedUnaryExpr),
         }
     }
 }
@@ -76,8 +90,7 @@ impl Evaluates for BinaryExpr {
             (left, TokenType::ExclamationEqual | TokenType::EqualEqual, right) => {
                 is_equal(left, self.token.clone(), right)
             }
-
-            _ => Expr::ErrorExpr,
+            _ => Expr::RuntimeErr(RunErr::NotImplementedBinaryExpr),
         }
     }
 }
@@ -90,19 +103,7 @@ fn subtraction(left: Expr, token: TokenType, right: Expr) -> Expr {
             TokenType::Minus,
             Expr::Literal(LiteralExpr::Number(r)),
         ) => Expr::Literal(LiteralExpr::Number(l - r)),
-        _ => Expr::ErrorExpr,
-    }
-}
-
-// helper function to evaluate BinaryExpr:
-fn division(left: Expr, token: TokenType, right: Expr) -> Expr {
-    match (left, token, right) {
-        (
-            Expr::Literal(LiteralExpr::Number(l)),
-            TokenType::Slash,
-            Expr::Literal(LiteralExpr::Number(r)),
-        ) => Expr::Literal(LiteralExpr::Number(l / r)), // TODO we might have to handle divide by 0
-        _ => Expr::ErrorExpr,
+        _ => Expr::RuntimeErr(RunErr::FailedSubtraction),
     }
 }
 
@@ -114,7 +115,26 @@ fn multiplication(left: Expr, token: TokenType, right: Expr) -> Expr {
             TokenType::Star,
             Expr::Literal(LiteralExpr::Number(r)),
         ) => Expr::Literal(LiteralExpr::Number(l * r)),
-        _ => Expr::ErrorExpr,
+        _ => Expr::RuntimeErr(RunErr::FailedMultiplication),
+    }
+}
+
+// helper function to evaluate BinaryExpr:
+fn division(left: Expr, token: TokenType, right: Expr) -> Expr {
+    // explicit checking for division by 0 errors:
+    if let Expr::Literal(LiteralExpr::Number(nr)) = right {
+        if nr == 0.0 || nr == -0.0 {
+            return Expr::RuntimeErr(RunErr::FailedDivisionByZero);
+        }
+    }
+
+    match (left, token, right) {
+        (
+            Expr::Literal(LiteralExpr::Number(l)),
+            TokenType::Slash,
+            Expr::Literal(LiteralExpr::Number(r)),
+        ) => Expr::Literal(LiteralExpr::Number(l / r)), // TODO we might have to handle divide by 0
+        _ => Expr::RuntimeErr(RunErr::FailedDivision),
     }
 }
 
@@ -149,7 +169,7 @@ fn addition(left: Expr, token: TokenType, right: Expr) -> Expr {
             TokenType::Plus,
             Expr::Literal(LiteralExpr::String(r)),
         ) => Expr::Literal(LiteralExpr::String(l + &r)),
-        _ => Expr::ErrorExpr,
+        _ => Expr::RuntimeErr(RunErr::FailedAddition),
     }
 }
 
@@ -176,7 +196,7 @@ fn comparison(left: Expr, token: TokenType, right: Expr) -> Expr {
             TokenType::GreaterEqual,
             Expr::Literal(LiteralExpr::Number(r)),
         ) => Expr::Literal(LiteralExpr::Boolean(l >= r)),
-        _ => Expr::ErrorExpr,
+        _ => Expr::RuntimeErr(RunErr::FailedComparison),
     }
 }
 
@@ -185,6 +205,6 @@ fn is_equal(left: Expr, token: TokenType, right: Expr) -> Expr {
     match (left, token, right) {
         (l, TokenType::ExclamationEqual, r) => Expr::Literal(LiteralExpr::Boolean(l != r)),
         (l, TokenType::EqualEqual, r) => Expr::Literal(LiteralExpr::Boolean(l == r)),
-        _ => Expr::ErrorExpr,
+        _ => Expr::RuntimeErr(RunErr::FailedEqual),
     }
 }

@@ -4,12 +4,12 @@
 
 use std::io::{self, Write};
 
-use crate::{lexer::new_scanner, parser::AST, interpreter::Evaluates};
+use crate::{interpreter::Evaluates, lexer::new_scanner, parser::AST};
+mod expressions;
+mod interpreter;
 mod lexer;
 mod parser;
 mod types;
-mod expressions;
-mod interpreter;
 
 pub fn run_prompt() {
     println!("Interpreter running, input a line:");

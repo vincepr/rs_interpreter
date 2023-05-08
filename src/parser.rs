@@ -1,8 +1,9 @@
 use std::mem;
 
-
-
-use crate::{types::{Err, Token, TokenType as Type}, expressions::{Expr, BinaryExpr, LiteralExpr, UnaryExpr, GroupingExpr}};
+use crate::{
+    expressions::{BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr},
+    types::{Err, Token, TokenType as Type},
+};
 
 /*
     The AST. Abstract-Syntax-Tree is the exposed part of this module.
