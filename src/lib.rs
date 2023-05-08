@@ -4,7 +4,7 @@
 
 use std::io::{self, Write};
 
-use crate::{interpreter::Evaluates, lexer::new_scanner, parser::AST};
+use crate::{lexer::new_scanner, parser::AST};
 mod expressions;
 mod interpreter;
 mod lexer;

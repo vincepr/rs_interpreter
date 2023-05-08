@@ -1,4 +1,4 @@
-/*
+/*TokenType
     Scanner/Lexer/Tokenizer and adjacent functions/structs
 */
 //      String              ->          Lexemes
@@ -7,7 +7,7 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 
-use crate::types::{Err, Token, TokenType};
+use crate::types::{Err, Token, TokenType, TokenType::*};
 
 #[derive(Debug)]
 pub struct Scanner<'a> {
@@ -50,7 +50,7 @@ impl<'a> Scanner<'a> {
             self.scan_token();
         }
         self.tokens.push(Token {
-            typ: TokenType::EOF,
+            typ: EOF,
             lexeme: "",
             line: self.line,
         });
@@ -64,36 +64,36 @@ impl<'a> Scanner<'a> {
         let c = self.advance_char();
         match c {
             // 1 Char long
-            '(' => self.add_token(TokenType::OpenParen),
-            ')' => self.add_token(TokenType::CloseParen),
-            '{' => self.add_token(TokenType::OpenBrace),
-            '}' => self.add_token(TokenType::CloseBrace),
-            ',' => self.add_token(TokenType::Comma),
-            '.' => self.add_token(TokenType::Dot),
-            '-' => self.add_token(TokenType::Minus),
-            '+' => self.add_token(TokenType::Plus),
-            ';' => self.add_token(TokenType::Semicolon),
-            '*' => self.add_token(TokenType::Star),
+            '(' => self.add_token(OpenParen),
+            ')' => self.add_token(CloseParen),
+            '{' => self.add_token(OpenBrace),
+            '}' => self.add_token(CloseBrace),
+            ',' => self.add_token(Comma),
+            '.' => self.add_token(Dot),
+            '-' => self.add_token(Minus),
+            '+' => self.add_token(Plus),
+            ';' => self.add_token(Semicolon),
+            '*' => self.add_token(Star),
             // 1-2 char long combinations:
             '!' => match self.check_for('=') {
-                true => self.add_token(TokenType::ExclamationEqual),
-                false => self.add_token(TokenType::Exclamation),
+                true => self.add_token(ExclamationEqual),
+                false => self.add_token(Exclamation),
             },
             '=' => match self.check_for('=') {
-                true => self.add_token(TokenType::EqualEqual),
-                false => self.add_token(TokenType::Equal),
+                true => self.add_token(EqualEqual),
+                false => self.add_token(Equal),
             },
             '<' => match self.check_for('=') {
-                true => self.add_token(TokenType::LessEqual),
-                false => self.add_token(TokenType::Less),
+                true => self.add_token(LessEqual),
+                false => self.add_token(Less),
             },
             '>' => match self.check_for('=') {
-                true => self.add_token(TokenType::GreaterEqual),
-                false => self.add_token(TokenType::Greater),
+                true => self.add_token(GreaterEqual),
+                false => self.add_token(Greater),
             },
             '/' => match self.check_for('/') {
                 true => self.skip_line(),
-                false => self.add_token(TokenType::Slash),
+                false => self.add_token(Slash),
             },
             // ignore whitespaces
             ' ' => {}
@@ -178,7 +178,7 @@ impl<'a> Scanner<'a> {
         }
         self.advance_char(); // consume the closing "
         let string_value = &self.source[self.start + 1..self.current - 1]; // TODO: do those values line up?
-        self.add_token(TokenType::String(string_value.to_string()));
+        self.add_token(String(string_value.to_string()));
     }
 
     // consume characters formatted aaa.bb untill no more digits found (with one possible .)
@@ -202,7 +202,7 @@ impl<'a> Scanner<'a> {
             ));
             return 0.0;
         });
-        self.add_token(TokenType::Number(number));
+        self.add_token(Number(number));
     }
 
     // identifiers or KEYWORDS, like: "var x12_d" "print some_string"
@@ -213,7 +213,7 @@ impl<'a> Scanner<'a> {
         let text = &self.source[self.start..self.current];
         match KEYWORDS.get(text) {
             Some(token_type) => self.add_token(token_type.clone()), // isKeyword    like "return"
-            None => self.add_token(TokenType::Identifier),          // isIdentifier like "some_var"
+            None => self.add_token(Identifier),                     // isIdentifier like "some_var"
         }
     }
 }
@@ -222,22 +222,22 @@ impl<'a> Scanner<'a> {
 lazy_static! {
     static ref KEYWORDS: HashMap<&'static str, TokenType> = {
         let mut map = HashMap::new();
-        map.insert("and", TokenType::And);
-        map.insert("class", TokenType::Class);
-        map.insert("else", TokenType::Else);
-        map.insert("false", TokenType::False);
-        map.insert("for", TokenType::For);
-        map.insert("fun", TokenType::Fun);
-        map.insert("if", TokenType::If);
-        map.insert("nil", TokenType::Nil);
-        map.insert("or", TokenType::Or);
-        map.insert("print", TokenType::Print);
-        map.insert("return", TokenType::Return);
-        map.insert("super", TokenType::Super);
-        map.insert("this", TokenType::This);
-        map.insert("true", TokenType::True);
-        map.insert("var", TokenType::Var);
-        map.insert("while", TokenType::While);
+        map.insert("and", And);
+        map.insert("class", Class);
+        map.insert("else", Else);
+        map.insert("false", False);
+        map.insert("for", For);
+        map.insert("fun", Fun);
+        map.insert("if", If);
+        map.insert("nil", Nil);
+        map.insert("or", Or);
+        map.insert("print", Print);
+        map.insert("return", Return);
+        map.insert("super", Super);
+        map.insert("this", This);
+        map.insert("true", True);
+        map.insert("var", Var);
+        map.insert("while", While);
         map
     };
 }
@@ -259,7 +259,7 @@ mod tests {
         }
     }
     fn _fake_data(data: Vec<(&str, TokenType)>) -> Vec<Token> {
-        let eof = vec![_fake_token("", TokenType::EOF)].into_iter();
+        let eof = vec![_fake_token("", EOF)].into_iter();
         data.iter()
             .map(|(lex, tok)| _fake_token(lex, tok.clone()))
             .chain(eof)
@@ -276,8 +276,8 @@ mod tests {
     #[test]
     fn one_chars_longs() {
         _is_expected("", vec![]); // only an eof token!
-        _is_expected(";", vec![(";", TokenType::Semicolon)]);
-        _is_expected("-", vec![("-", TokenType::Minus)]);
+        _is_expected(";", vec![(";", Semicolon)]);
+        _is_expected("-", vec![("-", Minus)]);
     }
 
     #[test]
@@ -285,10 +285,10 @@ mod tests {
         _is_expected(
             "{)(}",
             vec![
-                ("{", TokenType::OpenBrace),
-                (")", TokenType::CloseParen),
-                ("(", TokenType::OpenParen),
-                ("}", TokenType::CloseBrace),
+                ("{", OpenBrace),
+                (")", CloseParen),
+                ("(", OpenParen),
+                ("}", CloseBrace),
             ],
         );
     }
@@ -297,45 +297,37 @@ mod tests {
     fn two_char_longs() {
         _is_expected(
             "1=2",
-            vec![
-                ("1", TokenType::Number(1.0)),
-                ("=", TokenType::Equal),
-                ("2", TokenType::Number(2.0)),
-            ],
+            vec![("1", Number(1.0)), ("=", Equal), ("2", Number(2.0))],
         );
         _is_expected(
             "true== false",
-            vec![
-                ("true", TokenType::True),
-                ("==", TokenType::EqualEqual),
-                ("false", TokenType::False),
-            ],
+            vec![("true", True), ("==", EqualEqual), ("false", False)],
         );
         _is_expected(
             "-05 !=00232.5",
             vec![
-                ("-", TokenType::Minus),
-                ("05", TokenType::Number(5.0)),
-                ("!=", TokenType::ExclamationEqual),
-                ("00232.5", TokenType::Number(232.5)),
+                ("-", Minus),
+                ("05", Number(5.0)),
+                ("!=", ExclamationEqual),
+                ("00232.5", Number(232.5)),
             ],
         );
         _is_expected(
             "true==!false",
             vec![
-                ("true", TokenType::True),
-                ("==", TokenType::EqualEqual),
-                ("!", TokenType::Exclamation),
-                ("false", TokenType::False),
+                ("true", True),
+                ("==", EqualEqual),
+                ("!", Exclamation),
+                ("false", False),
             ],
         );
         _is_expected(
             "return 1 / 2 // somecomment is NOT token/ // all ignored",
             vec![
-                ("return", TokenType::Return),
-                ("1", TokenType::Number(1.0)),
-                ("/", TokenType::Slash),
-                ("2", TokenType::Number(2.0)),
+                ("return", Return),
+                ("1", Number(1.0)),
+                ("/", Slash),
+                ("2", Number(2.0)),
             ],
         );
     }
@@ -345,16 +337,16 @@ mod tests {
         _is_expected(
             "var name_varname = 5.5; this.thisname++",
             vec![
-                ("var", TokenType::Var),
-                ("name_varname", TokenType::Identifier),
-                ("=", TokenType::Equal),
-                ("5.5", TokenType::Number(5.5)),
-                (";", TokenType::Semicolon),
-                ("this", TokenType::This),
-                (".", TokenType::Dot),
-                ("thisname", TokenType::Identifier),
-                ("+", TokenType::Plus),
-                ("+", TokenType::Plus),
+                ("var", Var),
+                ("name_varname", Identifier),
+                ("=", Equal),
+                ("5.5", Number(5.5)),
+                (";", Semicolon),
+                ("this", This),
+                (".", Dot),
+                ("thisname", Identifier),
+                ("+", Plus),
+                ("+", Plus),
             ],
         );
     }
@@ -365,22 +357,22 @@ mod tests {
         let (tokens, errs) = s.results();
         let expected = vec![
             Token {
-                typ: TokenType::Var,
+                typ: Var,
                 lexeme: "var",
                 line: 1,
             },
             Token {
-                typ: TokenType::Return,
+                typ: Return,
                 lexeme: "return",
                 line: 2,
             },
             Token {
-                typ: TokenType::Semicolon,
+                typ: Semicolon,
                 lexeme: ";",
                 line: 4,
             },
             Token {
-                typ: TokenType::EOF,
+                typ: EOF,
                 lexeme: "",
                 line: 4,
             },
@@ -394,11 +386,11 @@ mod tests {
         _is_expected(
             " var parser = \"working\" ;",
             vec![
-                ("var", TokenType::Var),
-                ("parser", TokenType::Identifier),
-                ("=", TokenType::Equal),
-                ("\"working\"", TokenType::String("working".to_string())),
-                (";", TokenType::Semicolon),
+                ("var", Var),
+                ("parser", Identifier),
+                ("=", Equal),
+                ("\"working\"", String("working".to_string())),
+                (";", Semicolon),
             ],
         );
         // now without closing the string:
@@ -406,11 +398,7 @@ mod tests {
             " var parser = \"notworking ; nothing after unterminated quotes should get reached",
         );
         let (tokens, errs) = s.results();
-        let expected = _fake_data(vec![
-            ("var", TokenType::Var),
-            ("parser", TokenType::Identifier),
-            ("=", TokenType::Equal),
-        ]);
+        let expected = _fake_data(vec![("var", Var), ("parser", Identifier), ("=", Equal)]);
 
         assert_eq!(1, errs.len());
         assert_eq!(tokens, &expected);
