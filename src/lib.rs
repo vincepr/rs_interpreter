@@ -10,13 +10,13 @@ mod interpreter;
 mod lexer;
 mod parser;
 mod types;
+mod statements;
 
 pub fn run_prompt() {
     println!("Interpreter running, input a line:");
     loop {
-        // read user input
         print!(">");
-        io::stdout().flush().expect("flush failed!"); // rust stdin is buffered so we have to flush it
+        io::stdout().flush().expect("flush failed!");
         let mut input = String::new();
         io::stdin()
             .read_line(&mut input)
@@ -35,21 +35,17 @@ pub fn run_file(input: String) {
 fn run(input: String) {
     let lexer = new_scanner(&input);
     let (tokens, mut errors) = lexer.results();
-    // scanner.scan_all_tokens();
-    // let tokens = scanner.return_tokens();
 
     let ast = AST::new(tokens);
 
-    // print out the AST:
+    //TODO: make printing of AST optional (flag or command in REPL to toggle)
     println!("AST: {}", ast.print());
-
     let expr = ast.root;
     let result = interpreter::interpret(expr);
     println!("{result}");
 
-    // join errors together:
+    // join errors together and print them out:
     errors.extend(ast.errors);
-    // print out the Errors:
     for er in errors {
         println!("{}", er.to_string());
     }

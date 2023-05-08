@@ -131,8 +131,12 @@ fn addition(left: Expr, token: TokenType, right: Expr) -> Expr {
         // addition
         (Literal(Number(l)), TokenType::Plus, Literal(Number(r))) => Literal(Number(l + r)),
         // string concatinations:
-        (Literal(String(l)), TokenType::Plus, Literal(Number(r))) => {Literal(String(l + &r.to_string()))}
-        (Literal(String(l)), TokenType::Plus, Literal(Boolean(r))) => {Literal(String(l + &r.to_string()))}
+        (Literal(String(l)), TokenType::Plus, Literal(Number(r))) => {
+            Literal(String(l + &r.to_string()))
+        }
+        (Literal(String(l)), TokenType::Plus, Literal(Boolean(r))) => {
+            Literal(String(l + &r.to_string()))
+        }
         (Literal(String(l)), TokenType::Plus, Literal(Nil)) => Literal(String(l + "Nil")),
         (Literal(String(l)), TokenType::Plus, Literal(String(r))) => Literal(String(l + &r)),
         _ => RuntimeErr(RunErr::FailedAddition),
@@ -161,7 +165,7 @@ fn is_equal(left: Expr, token: TokenType, right: Expr) -> Expr {
     }
 }
 
-
+#[rustfmt::skip]
 #[cfg(test)]
 mod tests {
     use crate::{lexer, parser::AST};

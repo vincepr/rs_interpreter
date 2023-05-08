@@ -1,18 +1,18 @@
 use crate::{interpreter::RunErr, types::TokenType};
 
-// interface for all Expressions. They are the building blocks of our AST
+// Collection of all Expressions. They are the building blocks of our AST
 // We expose those to our backend-interpreter AND middle-parser
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
+    Literal(LiteralExpr),
+    Unary(UnaryExpr),
+    Binary(BinaryExpr),
+    Grouping(GroupingExpr),
     /// When the Parser fails it creates a Stand in ErrorToken to continue parsing the rest
     ErrorExpr,
     /// Run time Errors that happen in the Interpreter
     RuntimeErr(RunErr),
-    Binary(BinaryExpr),
-    Unary(UnaryExpr),
-    Grouping(GroupingExpr),
-    Literal(LiteralExpr),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -63,3 +63,4 @@ impl std::fmt::Display for Expr {
         }
     }
 }
+

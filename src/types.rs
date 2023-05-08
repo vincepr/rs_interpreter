@@ -74,7 +74,6 @@ pub enum TokenType {
 impl fmt::Display for TokenType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self {
-            // DEBUG MODE: TODO remove this line to make below reachable again
             TokenType::OpenParen => f.write_str("("),
             TokenType::CloseParen => f.write_str(")"),
             TokenType::OpenBrace => f.write_str("{"),
@@ -86,7 +85,6 @@ impl fmt::Display for TokenType {
             TokenType::Semicolon => f.write_str(";"),
             TokenType::Slash => f.write_str("/"),
             TokenType::Star => f.write_str("*"),
-
             TokenType::Exclamation => f.write_str("!"),
             TokenType::ExclamationEqual => f.write_str("!="),
             TokenType::Equal => f.write_str("="),
