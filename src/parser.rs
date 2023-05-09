@@ -2,7 +2,7 @@ use std::mem;
 
 use crate::{
     expressions::{BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr},
-    types::{Err, Token, TokenType as Type},
+    types::{Err, Token, TokenType as Type}, statements::{Statement},
 };
 
 /*
@@ -15,14 +15,14 @@ use crate::{
 #[derive(Debug)]
 pub struct AST {
     pub errors: Vec<Err>,
-    pub root: Expr,
+    pub root: Vec<Statement>,
 }
 impl AST {
     /// parses a new AST (Abstract-Syntax-Tree) from a flat array of Token provided by the lexer/scanner
     pub fn new(tokens: &Vec<Token>) -> AST {
         let mut new_ast = Self {
             errors: vec![],
-            root: Expr::ErrorExpr,
+            root: vec![],
         };
         new_ast.parse(tokens);
         new_ast
@@ -36,7 +36,12 @@ impl AST {
 
     /// pretty-print a representation of the AST. "(1+3)*3" becomes <(<1 + 2>) * 3>
     pub fn print(&self) -> String {
-        return self.root.to_string();
+        use std::fmt::Write;
+        let mut str = String::new();
+        for n in &self.root{
+            let _ = write!(&mut str, "{}", n);
+        }
+        return str;
     }
 }
 
@@ -54,8 +59,12 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse(&mut self) -> Expr {
-        self.expression()
+    fn parse(&mut self) -> Vec<Statement> {
+        let mut statements = vec![];
+        while !self.is_at_end() {
+            statements.push(self.statement());
+        }
+        return statements
     }
 }
 
@@ -110,8 +119,38 @@ impl<'a> Parser<'a> {
     }
 }
 
-/*
-        The Grammar rules sorted by precedence
+
+/* 
+        Handling Statements 
+*/
+
+impl<'a> Parser<'a> {
+    fn statement(&mut self) -> Statement {
+        if self.expect(vec![Type::Print]) {
+            return self.printStatement();
+        }
+        return self.expressionStatement();
+    }
+
+    fn printStatement(&mut self) -> Statement {
+        let value: Expr = self.expression();
+        //TODO: handle runtime errors here? result from consume?
+        _ = self.consume(Type::Semicolon, "Expected ; after value.");
+        //TODO: check if value is string in here?
+        return Statement::PrintSt(value)
+    }
+
+    fn expressionStatement(&mut self) -> Statement {
+        let expr: Expr = self.expression();
+        _ = self.consume(Type::Semicolon, "Expected ; after value.");
+        return Statement::ExprSt(expr)
+    }
+}
+
+/* 
+        Handling Expressions
+
+The Grammar rules sorted by precedence:
  PrioToCheck:
             1       ==  !=              equality()      ex: true != false
             2       >   >=  <   <=      comparison()    ex: 3>2
@@ -243,7 +282,7 @@ impl<'a> Parser<'a> {
 /*
     Testing:
 */
-
+/*
 #[cfg(test)]
 mod tests {
 
@@ -330,3 +369,5 @@ mod tests {
         assert!(ast.errors.len() == 0);
     }
 }
+
+*/

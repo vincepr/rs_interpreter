@@ -41,8 +41,8 @@ fn run(input: String) {
     //TODO: make printing of AST optional (flag or command in REPL to toggle)
     println!("AST: {}", ast.print());
     let expr = ast.root;
-    let result = interpreter::interpret(expr);
-    println!("{result}");
+    interpreter::interpret(expr);
+    //println!("{result}");
 
     // join errors together and print them out:
     errors.extend(ast.errors);

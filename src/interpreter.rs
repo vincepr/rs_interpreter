@@ -2,12 +2,14 @@ use crate::{
     expressions::{
         BinaryExpr, Expr, Expr::*, GroupingExpr, LiteralExpr, LiteralExpr::*, UnaryExpr,
     },
-    types::TokenType,
+    types::TokenType, statements::{Statement},
 };
 
 /// Takes the root of the AST and evaluates it down to a result.
-pub fn interpret(input: Expr) -> Expr {
-    input.evaluated()
+pub fn interpret(inputs: Vec<Statement>) {
+    for statement in inputs{
+        statement.eval();
+    }
 }
 
 /// Errors that happen at runtime: Ex at evaluating an Expression, trying to divide by 0;
@@ -178,11 +180,20 @@ mod tests {
         let s = lexer::new_scanner(input);
         let (tokens, lexer_errs) = s.results();
         let ast = AST::new(tokens);
-        let result = interpret(ast.root);
+        let statements = ast.root;
+        for s in statements{
+            if let Statement::ExprSt(expr) = s{
+                let res = expr.evaluated();
+                assert_eq!(res, expected);
+            }else { panic!("expected a Expression that evaluates!")}
+            assert!(lexer_errs.len() == 0);
+            assert!(ast.errors.len() == 0);
+        }
+
+
+
         
-        assert_eq!(result, expected);
-        assert!(lexer_errs.len() == 0);
-        assert!(ast.errors.len() == 0);
+        
     }
 
     #[test]
