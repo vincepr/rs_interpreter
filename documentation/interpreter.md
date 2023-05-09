@@ -30,3 +30,15 @@ printStmt →     "print" expression ";" ;
 The operands for `+` for example are always 2 expressions. The body of a while loop is always a statement. Since those two Syntaxes are always disjoint, we can have 2 separate trees.
 
 - So we add the Syntax tree to our interpreter.
+
+## Declarations
+Declarations like `var drinks = "coca cola";` added to our grammar. 
+
+- Extra care is required to disallow `if true var x = 1;` since scope and usefulness of that would be questionable.
+- also defining a variable without initializing: `var x;` should be possible.
+```
+program   →     statement* EOF ;
+program   →     varDecl | statement ;
+statement →     exprStmt | printStmt ;
+...
+```

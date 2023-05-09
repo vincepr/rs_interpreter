@@ -42,7 +42,6 @@ fn run(input: String) {
     println!("AST: {}", ast.print());
     let expr = ast.root;
     interpreter::interpret(expr);
-    //println!("{result}");
 
     // join errors together and print them out:
     errors.extend(ast.errors);

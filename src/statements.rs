@@ -25,7 +25,7 @@ impl Statement {
 }
 fn eval_print_statement(expr: &Expr){
     let res = expr.evaluated();
-    print!("{res}");
+    println!("{res}");  // create the side-effect of print"..."
 }
 fn eval_expr_statement(expr: &Expr){
     expr.evaluated();
