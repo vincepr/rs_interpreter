@@ -127,12 +127,12 @@ impl<'a> Parser<'a> {
 impl<'a> Parser<'a> {
     fn statement(&mut self) -> Statement {
         if self.expect(vec![Type::Print]) {
-            return self.printStatement();
+            return self.print_statement();
         }
-        return self.expressionStatement();
+        return self.expression_statement();
     }
 
-    fn printStatement(&mut self) -> Statement {
+    fn print_statement(&mut self) -> Statement {
         let value: Expr = self.expression();
         //TODO: handle runtime errors here? result from consume?
         _ = self.consume(Type::Semicolon, "Expected ; after value.");
@@ -140,7 +140,7 @@ impl<'a> Parser<'a> {
         return Statement::PrintSt(value)
     }
 
-    fn expressionStatement(&mut self) -> Statement {
+    fn expression_statement(&mut self) -> Statement {
         let expr: Expr = self.expression();
         _ = self.consume(Type::Semicolon, "Expected ; after value.");
         return Statement::ExprSt(expr)
@@ -282,7 +282,7 @@ impl<'a> Parser<'a> {
 /*
     Testing:
 */
-/*
+
 #[cfg(test)]
 mod tests {
 
@@ -320,6 +320,8 @@ mod tests {
             token: TokenType::EqualEqual,
             right: Box::new(Expr::Literal(LiteralExpr::Boolean(false))),
         });
+
+        let expected = vec![Statement::ExprSt(expected)];
         assert_eq!(ast.root, expected);
         assert!(ast.errors.len() == 0);
     }
@@ -342,6 +344,7 @@ mod tests {
             })),
         });
 
+        let expected = vec![Statement::ExprSt(expected)];
         assert_eq!(ast.root, expected);
         assert!(ast.errors.len() == 0);
     }
@@ -365,9 +368,10 @@ mod tests {
             token: Type::Slash,
             right: Box::new(Expr::Literal(LiteralExpr::Number(3.0))),
         });
+
+        let expected = vec![Statement::ExprSt(expected)];
         assert_eq!(ast.root, expected);
         assert!(ast.errors.len() == 0);
     }
 }
 
-*/
