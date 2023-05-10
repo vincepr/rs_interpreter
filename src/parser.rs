@@ -2,7 +2,7 @@ use std::mem;
 
 use crate::{
     expressions::{BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr},
-    types::{Err, Token, TokenType as Type},
+    types::{Err, Token, TokenType as Type}, statements::{Statement},
 };
 
 /*
@@ -15,14 +15,14 @@ use crate::{
 #[derive(Debug)]
 pub struct AST {
     pub errors: Vec<Err>,
-    pub root: Expr,
+    pub root: Vec<Statement>,
 }
 impl AST {
     /// parses a new AST (Abstract-Syntax-Tree) from a flat array of Token provided by the lexer/scanner
     pub fn new(tokens: &Vec<Token>) -> AST {
         let mut new_ast = Self {
             errors: vec![],
-            root: Expr::ErrorExpr,
+            root: vec![],
         };
         new_ast.parse(tokens);
         new_ast
@@ -36,7 +36,12 @@ impl AST {
 
     /// pretty-print a representation of the AST. "(1+3)*3" becomes <(<1 + 2>) * 3>
     pub fn print(&self) -> String {
-        return self.root.to_string();
+        use std::fmt::Write;
+        let mut str = String::new();
+        for n in &self.root{
+            let _ = write!(&mut str, "{}", n);
+        }
+        return str;
     }
 }
 
@@ -54,8 +59,12 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse(&mut self) -> Expr {
-        self.expression()
+    fn parse(&mut self) -> Vec<Statement> {
+        let mut statements = vec![];
+        while !self.is_at_end() {
+            statements.push(self.declaration());
+        }
+        return statements
     }
 }
 
@@ -110,8 +119,64 @@ impl<'a> Parser<'a> {
     }
 }
 
-/*
-        The Grammar rules sorted by precedence
+
+/* 
+        Handling Statements 
+*/
+
+impl<'a> Parser<'a> {
+    fn declaration(&mut self) -> Statement {
+        //TODO crafting interpreters handles runtime errors here, decide where i want to if it fails it does synchronize() and return null.
+        if self.expect(vec![Type::Var]){
+            return self.var_declaration();
+        }
+        return self.statement();
+    }
+
+    /// var IDENTIFIER optionalINITIALVALUE ;
+    fn var_declaration(&mut self) -> Statement {
+        let name: String;
+        if let Ok(token) = self.consume(Type::Identifier, "Expected variable name after var"){
+            name = token.lexeme.to_string();
+        } else {
+            return Statement::ErrStatementVariable;
+        }
+        let mut initializer = Expr::Literal(LiteralExpr::Nil);  // null if not initialized
+        if self.expect(vec![Type::Equal]){
+            initializer = self.expression();
+        }
+        self.consume(Type::Semicolon, "Expect ';' after variable declaration");
+        return Statement::VarSt(name, initializer);
+
+    }
+
+
+    fn statement(&mut self) -> Statement {
+        if self.expect(vec![Type::Print]) {
+            return self.print_statement();
+        }
+        return self.expression_statement();
+    }
+
+    fn print_statement(&mut self) -> Statement {
+        let value: Expr = self.expression();
+        //TODO: handle runtime errors here? result from consume?
+        _ = self.consume(Type::Semicolon, "Expected ; after value.");
+        //TODO: check if value is string in here?
+        return Statement::PrintSt(value)
+    }
+
+    fn expression_statement(&mut self) -> Statement {
+        let expr: Expr = self.expression();
+        _ = self.consume(Type::Semicolon, "Expected ; after value.");
+        return Statement::ExprSt(expr)
+    }
+}
+
+/* 
+        Handling Expressions
+
+The Grammar rules sorted by precedence:
  PrioToCheck:
             1       ==  !=              equality()      ex: true != false
             2       >   >=  <   <=      comparison()    ex: 3>2
@@ -213,7 +278,8 @@ impl<'a> Parser<'a> {
                 Expr::Grouping(GroupingExpr {
                     expr: Box::new(expr),
                 })
-            }
+            },
+            Type::Identifier => Expr::VariableExpr(self.previous().lexeme.to_string()),
 
             _ => {
                 // cant parse sucessuflly
@@ -228,14 +294,14 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// We expect the Type (advance and return expr if so). Ff not we return an error.
+    /// We expect the Type (advance and return expr if so). If not we return an error.
     fn consume(&mut self, typ: Type, msg: &str) -> Result<&Token, Err> {
         // TODO if we actually use ErrorExpr instead of Result<Expr>
         // we should self.errors.push(e) in here not upstream!
         // and then just return a Option<&Token>
         match self.check(typ) {
             true => Ok(self.advance()),
-            false => Err(Err::Parser(msg.to_string(), self.peek().line)),
+            false => {Err(Err::Parser(msg.to_string(), self.peek().line))},
         }
     }
 }
@@ -281,6 +347,8 @@ mod tests {
             token: TokenType::EqualEqual,
             right: Box::new(Expr::Literal(LiteralExpr::Boolean(false))),
         });
+
+        let expected = vec![Statement::ExprSt(expected)];
         assert_eq!(ast.root, expected);
         assert!(ast.errors.len() == 0);
     }
@@ -303,6 +371,7 @@ mod tests {
             })),
         });
 
+        let expected = vec![Statement::ExprSt(expected)];
         assert_eq!(ast.root, expected);
         assert!(ast.errors.len() == 0);
     }
@@ -326,7 +395,10 @@ mod tests {
             token: Type::Slash,
             right: Box::new(Expr::Literal(LiteralExpr::Number(3.0))),
         });
+
+        let expected = vec![Statement::ExprSt(expected)];
         assert_eq!(ast.root, expected);
         assert!(ast.errors.len() == 0);
     }
 }
+
