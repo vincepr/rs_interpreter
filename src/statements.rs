@@ -14,12 +14,16 @@ use crate::{expressions::Expr, interpreter::Evaluates};
 pub enum Statement {
     ExprSt(Expr),
     PrintSt(Expr),
+    VarSt(String, Expr),
+    ErrStatementVariable,
 }
 impl Statement {
     pub fn eval(&self) {
         match self {
             Statement::ExprSt(expr) => eval_expr_statement(expr),
             Statement::PrintSt(expr) => eval_print_statement(expr),
+            Statement::VarSt(str, expr) => ,
+            Statement::ErrStatementVariable => panic!("Hit Error Statement Variable"),
         }
     }
 }

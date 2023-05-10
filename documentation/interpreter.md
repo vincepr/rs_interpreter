@@ -31,7 +31,7 @@ The operands for `+` for example are always 2 expressions. The body of a while l
 
 - So we add the Syntax tree to our interpreter.
 
-## Declarations
+### Declarations
 Declarations like `var drinks = "coca cola";` added to our grammar. 
 
 - Extra care is required to disallow `if true var x = 1;` since scope and usefulness of that would be questionable.
@@ -42,3 +42,5 @@ program   →     varDecl | statement ;
 statement →     exprStmt | printStmt ;
 ...
 ```
+
+#### Environments.
