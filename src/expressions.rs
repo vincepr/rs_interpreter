@@ -1,4 +1,4 @@
-use crate::{interpreter::RunErr, types::{TokenType, Token}};
+use crate::{interpreter::RunErr, types::{TokenType}};
 
 // Collection of all Expressions. They are the building blocks of our AST
 // We expose those to our backend-interpreter AND middle-parser
@@ -13,7 +13,6 @@ pub enum Expr {
     ErrorExpr,
     /// Run time Errors that happen in the Interpreter
     RuntimeErr(RunErr),
-    VariableExpr(String),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -60,8 +59,7 @@ impl std::fmt::Display for Expr {
             }
             Expr::Grouping(GroupingExpr { expr }) => f.write_fmt(format_args!("({expr})")),
             Expr::RuntimeErr(e) => write!(f, "RuntimeErr({:?})", e),
-            Expr::VariableExpr(str) => f.write_fmt(format_args!("var={str}")),
-            //_ => write!(f, "{:?}", self),             //Failback to Debug-Printing for unimplemented ones:
+            //_ => write!(f, "{:?}", self),             //Failback to Debug-Printing for unimplemented expressions?
         }
     }
 }

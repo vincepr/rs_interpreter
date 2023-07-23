@@ -11,6 +11,7 @@ mod lexer;
 mod parser;
 mod types;
 mod statements;
+mod environment;
 
 pub fn run_prompt() {
     println!("Interpreter running, input a line:");

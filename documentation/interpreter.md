@@ -43,4 +43,9 @@ statement →     exprStmt | printStmt ;
 ...
 ```
 
-#### Environments.
+#### Environment
+Bindings that associate variable-identifiers with valures need to be stored somewhere. This is usually called **environment**.
+
+
+
+

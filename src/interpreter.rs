@@ -7,8 +7,10 @@ use crate::{
 
 /// Takes the root of the AST and evaluates it down to a result.
 pub fn interpret(inputs: Vec<Statement>) {
+    // envirnoment that holds reference to all variable-names-> values mapped:
+    let mut env = crate::environment::VarMap::new();
     for statement in inputs{
-        statement.eval();
+        statement.eval(&env);
     }
 }
 

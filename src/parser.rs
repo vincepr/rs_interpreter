@@ -150,7 +150,6 @@ impl<'a> Parser<'a> {
 
     }
 
-
     fn statement(&mut self) -> Statement {
         if self.expect(vec![Type::Print]) {
             return self.print_statement();

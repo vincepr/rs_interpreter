@@ -7,7 +7,7 @@
         - Represent blocks and local scope
 */
 
-use crate::{expressions::Expr, interpreter::Evaluates};
+use crate::{expressions::Expr, interpreter::Evaluates, environment::{ VarMap}};
 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -18,21 +18,24 @@ pub enum Statement {
     ErrStatementVariable,
 }
 impl Statement {
-    pub fn eval(&self) {
+    pub fn eval(&self, environment: &mut VarMap) {
         match self {
             Statement::ExprSt(expr) => eval_expr_statement(expr),
             Statement::PrintSt(expr) => eval_print_statement(expr),
-            Statement::VarSt(str, expr) => ,
+            Statement::VarSt(str, expr) => eval_var_statement(expr, environment),
             Statement::ErrStatementVariable => panic!("Hit Error Statement Variable"),
         }
     }
+}
+fn eval_expr_statement(expr: &Expr){
+    expr.evaluated();   // our Trait-interface that will evaluate it down recursively
 }
 fn eval_print_statement(expr: &Expr){
     let res = expr.evaluated();
     println!("{res}");  // create the side-effect of print"..."
 }
-fn eval_expr_statement(expr: &Expr){
-    expr.evaluated();
+fn eval_var_statement(expr: &Expr, environment: &mut VarMap) {
+    !todo!()
 }
 
 
