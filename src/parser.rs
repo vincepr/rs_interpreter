@@ -1,7 +1,7 @@
 use std::mem;
 
 use crate::{
-    expressions::{BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr, AssignExpr, VariableExpr},
+    expressions::{BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr, VarAssignExpr, VarReadExpr},
     types::{Err, Token, TokenType as Type}, statements::{Statement},
 };
 
@@ -46,8 +46,10 @@ impl AST {
 }
 
 struct Parser<'a> {
+    /// List of all Tokens we parse
     tokens: &'a Vec<Token<'a>>,
-    current: usize,
+    /// Index to current token
+    current: usize,             
     errors: Vec<Err>,
 }
 impl<'a> Parser<'a> {
@@ -156,7 +158,6 @@ impl<'a> Parser<'a> {
         }
         self.consume(Type::Semicolon, "Expect ';' after variable declaration");
         return Statement::VariableSt(name, initializer);
-
     }
 
     fn statement(&mut self) -> Statement {
@@ -220,9 +221,9 @@ impl<'a> Parser<'a> {
         if self.expect(vec![Type::Equal] ) {
             let equals = self.previous();
             let value = self.assignment();
-            if let Expr::Variable(var) = expr {
+            if let Expr::VarAssign(var) = expr {
                 let name = var.name;
-                return Expr::Assign(AssignExpr::new(name, value));
+                return Expr::VarAssign(VarAssignExpr::new(name, value));
             }
             return self.errorExpr("Invalid assignment target.");
         }
@@ -317,7 +318,7 @@ impl<'a> Parser<'a> {
                     expr: Box::new(expr),
                 })
             },
-            Type::Identifier => Expr::Variable(VariableExpr{
+            Type::Identifier => Expr::VarRead(VarReadExpr{
                 name : self.previous().lexeme.to_string() }),
 
             _ => {

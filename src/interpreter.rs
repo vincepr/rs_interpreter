@@ -1,6 +1,6 @@
 use crate::{
     expressions::{
-        BinaryExpr, Expr, Expr::*, GroupingExpr, LiteralExpr, LiteralExpr::*, UnaryExpr, VariableExpr,
+        BinaryExpr, Expr, Expr::*, GroupingExpr, LiteralExpr, LiteralExpr::*, UnaryExpr, VarAssignExpr, VarReadExpr,
     },
     types::TokenType, statements::{Statement}, environment::Environment,
 };
@@ -10,7 +10,7 @@ pub fn interpret(inputs: Vec<Statement>) {
     // envirnoment that holds reference to all variable-names-> values mapped:
     let mut globalScope = crate::environment::Environment::new(None);
     for statement in inputs{
-        exececute(&globalScope, statement);
+        exececute(&mut globalScope, statement);
     }
 }
 
@@ -18,17 +18,17 @@ pub fn interpret(inputs: Vec<Statement>) {
         Statements Execute, always end with a ;
 */
 
-fn exececute(scope: &Environment, statement: Statement) {
+fn exececute(scope: &mut Environment, statement: Statement) {
     // TODO: Here should be a good place to check for errors? check if we get an error then print that out or smth
     statement.execute(scope);
 }
 
 /// gets called from Statements-'visitorpattern'
-pub fn executeBlock(parentScope:&Environment, statements: Vec<Statement>) {
+pub fn executeBlock(parentScope:& mut Environment, statements: Vec<Statement>) {
     // create the new Scope:
-    let localScope = Environment::new(Some(parentScope));
+    let mut  localScope = Environment::new(Some(parentScope));
     for statement in statements {
-        exececute(&localScope, statement);
+        exececute(&mut localScope, statement);
     }
 }
 
@@ -64,8 +64,22 @@ impl Evaluates for Expr {
             Grouping(expr) => expr.evaluated(),
             Unary(expr) => expr.evaluated(),
             Binary(expr) => expr.evaluated(),
-            Variable(expr) => expr.evaluated(),
+
+            VarAssign(expr) => expr.evaluated(),
+            VarRead(expr) => expr.evaluated(),
         }
+    }
+}
+
+impl Evaluates for VarAssignExpr {
+    fn evaluated(&self) -> Expr {
+        !todo!()
+    }
+}
+
+impl Evaluates for VarReadExpr {
+    fn evaluated(&self) -> Expr {
+        !todo!()
     }
 }
 
@@ -118,12 +132,6 @@ impl Evaluates for BinaryExpr {
             }
             _ => RuntimeErr(RunErr::NotImplementedBinaryExpr),
         }
-    }
-}
-
-impl Evaluates for VariableExpr {
-    fn evaluated(&self, environment: VarMap) -> Expr {
-        return environment.get
     }
 }
 

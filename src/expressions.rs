@@ -1,7 +1,7 @@
 use crate::{interpreter::RunErr, types::{TokenType}};
 
 // Collection of all Expressions. They are the building blocks of our AST
-// We expose those to our backend-interpreter AND middle-parser
+// We expose those to our backend-interpreter AND middleend-parser
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
@@ -9,8 +9,8 @@ pub enum Expr {
     Unary(UnaryExpr),
     Binary(BinaryExpr),
     Grouping(GroupingExpr),
-    Variable(VariableExpr),    
-    Assign(AssignExpr),
+    VarRead(VarReadExpr),    
+    VarAssign(VarAssignExpr),
     /// When the Parser fails it creates a Stand in ErrorToken to continue parsing the rest
     ErrorExpr,
     /// Run time Errors that happen in the Interpreter
@@ -37,19 +37,19 @@ pub struct GroupingExpr {
 
 /// accesses a variable like 'x+1;' will have to access x
 #[derive(Debug, Clone, PartialEq)]
-pub struct VariableExpr {
+pub struct VarReadExpr {
     pub name: String,
 }
 
 /// writes to a local or global variable. 'x = 123;'
 #[derive(Debug, Clone, PartialEq)]
-pub struct AssignExpr {
+pub struct VarAssignExpr {
     pub name: String,
     pub value: Box<Expr>,
 }
-impl AssignExpr {
+impl VarAssignExpr {
     pub fn new(name: String, value:Expr) -> Self {
-        AssignExpr { name: name, value: Box::new(value) }
+        VarAssignExpr { name: name, value: Box::new(value) }
     }
 }
 
@@ -78,8 +78,8 @@ impl std::fmt::Display for Expr {
                 f.write_fmt(format_args!("<{token} {right}>"))
             }
             Expr::Grouping(GroupingExpr { expr }) => f.write_fmt(format_args!("({expr})")),
-            Expr::Variable(VariableExpr { name }) => name.fmt(f),
-            Expr::Assign(AssignExpr { name, value }) => f.write_fmt(format_args!("<{name} = {value}>")),
+            Expr::VarRead(VarReadExpr { name }) => name.fmt(f),
+            Expr::VarAssign(VarAssignExpr { name, value }) => f.write_fmt(format_args!("<{name} = {value}>")),
             Expr::RuntimeErr(e) => write!(f, "RuntimeErr({:?})", e),
             //_ => write!(f, "{:?}", self),             //Failback to Debug-Printing for unimplemented expressions?
         }
