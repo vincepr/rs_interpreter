@@ -50,7 +50,7 @@ fn eval_var_statement(name: String, initialValue: Expr ,  environment: &mut Envi
     let value = initialValue.evaluated();
     environment.define(name, value);
 }
-fn eval_block_statement(statements: Vec<Statement>,  environment: &mut Environment) {
+fn eval_block_statement<'a> (statements: Vec<Statement>,  environment: &'a mut Environment<'a>) {
     crate::interpreter::executeBlock(environment, statements);
 }
 fn eval_assign_statement(name: String, newValue: Expr ,  environment: &mut Environment) {

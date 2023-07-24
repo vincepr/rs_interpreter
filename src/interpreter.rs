@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     expressions::{
         BinaryExpr, Expr, Expr::*, GroupingExpr, LiteralExpr, LiteralExpr::*, UnaryExpr, VarAssignExpr, VarReadExpr,
@@ -8,7 +10,12 @@ use crate::{
 /// Takes the root of the AST and evaluates it down to a result.
 pub fn interpret(inputs: Vec<Statement>) {
     // envirnoment that holds reference to all variable-names-> values mapped:
-    let mut globalScope = crate::environment::Environment::new(None);
+    //let mut globalScope = crate::environment::Environment::new(None);
+    let mut globalScope = crate::environment::Environment{
+        enclosing: None ,
+        values: HashMap::new(),
+    };
+
     for statement in inputs{
         exececute(&mut globalScope, statement);
     }
@@ -24,9 +31,13 @@ fn exececute(scope: &mut Environment, statement: Statement) {
 }
 
 /// gets called from Statements-'visitorpattern'
-pub fn executeBlock(parentScope:& mut Environment, statements: Vec<Statement>) {
+pub fn executeBlock<'a>(parentScope:&'a mut Environment<'a>, statements: Vec<Statement>) {
     // create the new Scope:
-    let mut  localScope = Environment::new(Some(parentScope));
+    //let mut  localScope = Environment::new(Some(parentScope));
+    let mut localScope = crate::environment::Environment{
+        enclosing: Some(parentScope) ,
+        values: HashMap::new(),
+    };
     for statement in statements {
         exececute(&mut localScope, statement);
     }
