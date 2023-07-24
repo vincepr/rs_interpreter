@@ -1,7 +1,7 @@
 use std::mem;
 
 use crate::{
-    expressions::{BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr},
+    expressions::{BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr, AssignExpr, VariableExpr},
     types::{Err, Token, TokenType as Type}, statements::{Statement},
 };
 
@@ -117,8 +117,17 @@ impl<'a> Parser<'a> {
         }
         false
     }
-}
 
+    /// pushes error msg to the stack of errors, also returns a Error-Expression
+    fn errorExpr(&mut self, msg: &str) -> Expr {
+        // cant parse sucessuflly
+        self.errors.push(Err::Parser(
+            msg.into(),
+            self.peek().line,
+        ));
+        Expr::ErrorExpr
+    }
+}
 
 /* 
         Handling Statements 
@@ -146,13 +155,16 @@ impl<'a> Parser<'a> {
             initializer = self.expression();
         }
         self.consume(Type::Semicolon, "Expect ';' after variable declaration");
-        return Statement::VarSt(name, initializer);
+        return Statement::VariableSt(name, initializer);
 
     }
 
     fn statement(&mut self) -> Statement {
         if self.expect(vec![Type::Print]) {
             return self.print_statement();
+        }
+        if self.expect(vec![Type::OpenBrace]) {
+            return Statement::BlockSt(self.block());
         }
         return self.expression_statement();
     }
@@ -170,6 +182,16 @@ impl<'a> Parser<'a> {
         _ = self.consume(Type::Semicolon, "Expected ; after value.");
         return Statement::ExprSt(expr)
     }
+
+    /// a new block/scope
+    fn block(&mut self) -> Vec<Statement> {
+        let mut statements = Vec::<Statement>::new();
+        while !self.check(Type::CloseBrace) && !self.is_at_end() {
+            statements.push(self.declaration());
+        }
+        self.consume(Type::CloseBrace, "Expect '}' after block.");
+        return statements;
+    }
 }
 
 /* 
@@ -177,6 +199,8 @@ impl<'a> Parser<'a> {
 
 The Grammar rules sorted by precedence:
  PrioToCheck:
+    expression ->   assignment;
+    assignment ->   IDENTIFIER "=" assignment | equality();
             1       ==  !=              equality()      ex: true != false
             2       >   >=  <   <=      comparison()    ex: 3>2
             3       +   -               term()          ex: 1+2-3
@@ -187,7 +211,22 @@ The Grammar rules sorted by precedence:
 
 impl<'a> Parser<'a> {
     fn expression(&mut self) -> Expr {
-        self.equality()
+        self.assignment()
+    }
+
+    fn assignment(&mut self) -> Expr {
+        let expr = self.equality();
+        // we parse left side, if next is '=' then we know we are trying to assign:
+        if self.expect(vec![Type::Equal] ) {
+            let equals = self.previous();
+            let value = self.assignment();
+            if let Expr::Variable(var) = expr {
+                let name = var.name;
+                return Expr::Assign(AssignExpr::new(name, value));
+            }
+            return self.errorExpr("Invalid assignment target.");
+        }
+        return expr
     }
 
     fn equality(&mut self) -> Expr {
@@ -278,7 +317,8 @@ impl<'a> Parser<'a> {
                     expr: Box::new(expr),
                 })
             },
-            Type::Identifier => Expr::VariableExpr(self.previous().lexeme.to_string()),
+            Type::Identifier => Expr::Variable(VariableExpr{
+                name : self.previous().lexeme.to_string() }),
 
             _ => {
                 // cant parse sucessuflly

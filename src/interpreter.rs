@@ -1,18 +1,40 @@
 use crate::{
     expressions::{
-        BinaryExpr, Expr, Expr::*, GroupingExpr, LiteralExpr, LiteralExpr::*, UnaryExpr,
+        BinaryExpr, Expr, Expr::*, GroupingExpr, LiteralExpr, LiteralExpr::*, UnaryExpr, VariableExpr,
     },
-    types::TokenType, statements::{Statement},
+    types::TokenType, statements::{Statement}, environment::Environment,
 };
 
 /// Takes the root of the AST and evaluates it down to a result.
 pub fn interpret(inputs: Vec<Statement>) {
     // envirnoment that holds reference to all variable-names-> values mapped:
-    let mut env = crate::environment::VarMap::new();
+    let mut globalScope = crate::environment::Environment::new(None);
     for statement in inputs{
-        statement.eval(&env);
+        exececute(&globalScope, statement);
     }
 }
+
+/*
+        Statements Execute, always end with a ;
+*/
+
+fn exececute(scope: &Environment, statement: Statement) {
+    // TODO: Here should be a good place to check for errors? check if we get an error then print that out or smth
+    statement.execute(scope);
+}
+
+/// gets called from Statements-'visitorpattern'
+pub fn executeBlock(parentScope:&Environment, statements: Vec<Statement>) {
+    // create the new Scope:
+    let localScope = Environment::new(Some(parentScope));
+    for statement in statements {
+        exececute(&localScope, statement);
+    }
+}
+
+/*
+        Expressions Evaluate, something that evaluates to a value -> x+1 or true==nil
+*/
 
 /// Errors that happen at runtime: Ex at evaluating an Expression, trying to divide by 0;
 #[derive(Debug, Clone, PartialEq)]
@@ -42,6 +64,7 @@ impl Evaluates for Expr {
             Grouping(expr) => expr.evaluated(),
             Unary(expr) => expr.evaluated(),
             Binary(expr) => expr.evaluated(),
+            Variable(expr) => expr.evaluated(),
         }
     }
 }
@@ -95,6 +118,12 @@ impl Evaluates for BinaryExpr {
             }
             _ => RuntimeErr(RunErr::NotImplementedBinaryExpr),
         }
+    }
+}
+
+impl Evaluates for VariableExpr {
+    fn evaluated(&self, environment: VarMap) -> Expr {
+        return environment.get
     }
 }
 

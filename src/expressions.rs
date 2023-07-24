@@ -9,6 +9,8 @@ pub enum Expr {
     Unary(UnaryExpr),
     Binary(BinaryExpr),
     Grouping(GroupingExpr),
+    Variable(VariableExpr),    
+    Assign(AssignExpr),
     /// When the Parser fails it creates a Stand in ErrorToken to continue parsing the rest
     ErrorExpr,
     /// Run time Errors that happen in the Interpreter
@@ -31,6 +33,24 @@ pub struct UnaryExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupingExpr {
     pub expr: Box<Expr>,
+}
+
+/// accesses a variable like 'x+1;' will have to access x
+#[derive(Debug, Clone, PartialEq)]
+pub struct VariableExpr {
+    pub name: String,
+}
+
+/// writes to a local or global variable. 'x = 123;'
+#[derive(Debug, Clone, PartialEq)]
+pub struct AssignExpr {
+    pub name: String,
+    pub value: Box<Expr>,
+}
+impl AssignExpr {
+    pub fn new(name: String, value:Expr) -> Self {
+        AssignExpr { name: name, value: Box::new(value) }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -58,6 +78,8 @@ impl std::fmt::Display for Expr {
                 f.write_fmt(format_args!("<{token} {right}>"))
             }
             Expr::Grouping(GroupingExpr { expr }) => f.write_fmt(format_args!("({expr})")),
+            Expr::Variable(VariableExpr { name }) => name.fmt(f),
+            Expr::Assign(AssignExpr { name, value }) => f.write_fmt(format_args!("<{name} = {value}>")),
             Expr::RuntimeErr(e) => write!(f, "RuntimeErr({:?})", e),
             //_ => write!(f, "{:?}", self),             //Failback to Debug-Printing for unimplemented expressions?
         }

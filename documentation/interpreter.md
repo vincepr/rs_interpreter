@@ -46,6 +46,10 @@ statement →     exprStmt | printStmt ;
 #### Environment
 Bindings that associate variable-identifiers with valures need to be stored somewhere. This is usually called **environment**.
 
-
+```
+statement →     exprSt | printSt | block;
+block
+block     →     "{" declaration "}"
+```
 
 
