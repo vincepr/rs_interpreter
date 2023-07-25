@@ -1,7 +1,7 @@
-use crate::{interpreter::RunErr, types::TokenType};
+use crate::{interpreter::RunErr, types::{TokenType}};
 
 // Collection of all Expressions. They are the building blocks of our AST
-// We expose those to our backend-interpreter AND middle-parser
+// We expose those to our backend-interpreter AND middleend-parser
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
@@ -9,6 +9,8 @@ pub enum Expr {
     Unary(UnaryExpr),
     Binary(BinaryExpr),
     Grouping(GroupingExpr),
+    VarRead(VarReadExpr),    
+    VarAssign(VarAssignExpr),
     /// When the Parser fails it creates a Stand in ErrorToken to continue parsing the rest
     ErrorExpr,
     /// Run time Errors that happen in the Interpreter
@@ -31,6 +33,24 @@ pub struct UnaryExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct GroupingExpr {
     pub expr: Box<Expr>,
+}
+
+/// accesses a variable like 'x+1;' will have to access x
+#[derive(Debug, Clone, PartialEq)]
+pub struct VarReadExpr {
+    pub name: String,
+}
+
+/// writes to a local or global variable. 'x = 123;'
+#[derive(Debug, Clone, PartialEq)]
+pub struct VarAssignExpr {
+    pub name: String,
+    pub value: Box<Expr>,
+}
+impl VarAssignExpr {
+    pub fn new(name: String, value:Expr) -> Self {
+        VarAssignExpr { name: name, value: Box::new(value) }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -58,8 +78,10 @@ impl std::fmt::Display for Expr {
                 f.write_fmt(format_args!("<{token} {right}>"))
             }
             Expr::Grouping(GroupingExpr { expr }) => f.write_fmt(format_args!("({expr})")),
+            Expr::VarRead(VarReadExpr { name }) => name.fmt(f),
+            Expr::VarAssign(VarAssignExpr { name, value }) => f.write_fmt(format_args!("<{name} = {value}>")),
             Expr::RuntimeErr(e) => write!(f, "RuntimeErr({:?})", e),
-            //_ => write!(f, "{:?}", self),             //Failback to Debug-Printing for unimplemented ones:
+            //_ => write!(f, "{:?}", self),             //Failback to Debug-Printing for unimplemented expressions?
         }
     }
 }

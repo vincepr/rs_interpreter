@@ -12,6 +12,7 @@ pub enum Err {
     //      -> re-evaluate to line && character in line
     Parser(String, usize),
     Lexer(String, usize),
+    Interpreter(String, usize),
 }
 impl std::fmt::Display for Err {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -21,6 +22,9 @@ impl std::fmt::Display for Err {
             }
             Err::Parser(message, line) => {
                 f.write_fmt(format_args!("ParserERROR in line: {line} : {message}!"))
+            }
+            Err::Interpreter(message, line) => {
+                f.write_fmt(format_args!("Interpreter-ERROR in line: {line} : {message}!"))
             }
         }
     }

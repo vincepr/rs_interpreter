@@ -11,6 +11,7 @@ mod lexer;
 mod parser;
 mod types;
 mod statements;
+mod environment;
 
 pub fn run_prompt() {
     println!("Interpreter running, input a line:");
@@ -24,25 +25,24 @@ pub fn run_prompt() {
         if input.starts_with("#exit") {
             break;
         }
-        run(input);
+        run(input, true);
     }
 }
 
-pub fn run_file(input: String) {
-    run(input);
+pub fn run_file(input: String, print_ast: bool) {
+    run(input, print_ast);
 }
 
-fn run(input: String) {
+fn run(input: String, print_ast: bool) {
     let lexer = new_scanner(&input);
     let (tokens, mut errors) = lexer.results();
 
     let ast = AST::new(tokens);
 
-    //TODO: make printing of AST optional (flag or command in REPL to toggle)
-    println!("AST: {}", ast.print());
+    //optional debug info (prints the ast prefore interpreting it)
+    if print_ast {println!("AST: {}", ast.print()); }
     let expr = ast.root;
-    let result = interpreter::interpret(expr);
-    println!("{result}");
+    interpreter::interpret(expr);
 
     // join errors together and print them out:
     errors.extend(ast.errors);
