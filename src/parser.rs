@@ -1,8 +1,11 @@
 use std::mem;
 
 use crate::{
-    expressions::{BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr, VarAssignExpr, VarReadExpr},
-    types::{Err, Token, TokenType as Type}, statements::{Statement},
+    expressions::{
+        BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr, VarAssignExpr, VarReadExpr,
+    },
+    statements::Statement,
+    types::{Err, Token, TokenType as Type},
 };
 
 /*
@@ -38,7 +41,7 @@ impl AST {
     pub fn print(&self) -> String {
         use std::fmt::Write;
         let mut str = String::new();
-        for n in &self.root{
+        for n in &self.root {
             let _ = write!(&mut str, "{}", n);
         }
         return str;
@@ -49,7 +52,7 @@ struct Parser<'a> {
     /// List of all Tokens we parse
     tokens: &'a Vec<Token<'a>>,
     /// Index to current token
-    current: usize,             
+    current: usize,
     errors: Vec<Err>,
 }
 impl<'a> Parser<'a> {
@@ -66,7 +69,7 @@ impl<'a> Parser<'a> {
         while !self.is_at_end() {
             statements.push(self.declaration());
         }
-        return statements
+        return statements;
     }
 }
 
@@ -123,22 +126,19 @@ impl<'a> Parser<'a> {
     /// pushes error msg to the stack of errors, also returns a Error-Expression
     fn errorExpr(&mut self, msg: &str) -> Expr {
         // cant parse sucessuflly
-        self.errors.push(Err::Parser(
-            msg.into(),
-            self.peek().line,
-        ));
+        self.errors.push(Err::Parser(msg.into(), self.peek().line));
         Expr::ErrorExpr
     }
 }
 
-/* 
-        Handling Statements 
+/*
+        Handling Statements
 */
 
 impl<'a> Parser<'a> {
     fn declaration(&mut self) -> Statement {
         //TODO crafting interpreters handles runtime errors here, decide where i want to if it fails it does synchronize() and return null.
-        if self.expect(vec![Type::Var]){
+        if self.expect(vec![Type::Var]) {
             return self.var_declaration();
         }
         return self.statement();
@@ -147,13 +147,13 @@ impl<'a> Parser<'a> {
     /// var IDENTIFIER optionalINITIALVALUE ;
     fn var_declaration(&mut self) -> Statement {
         let name: String;
-        if let Ok(token) = self.consume(Type::Identifier, "Expected variable name after var"){
+        if let Ok(token) = self.consume(Type::Identifier, "Expected variable name after var") {
             name = token.lexeme.to_string();
         } else {
             return Statement::ErrStatementVariable;
         }
-        let mut initializer = Expr::Literal(LiteralExpr::Nil);  // null if not initialized
-        if self.expect(vec![Type::Equal]){
+        let mut initializer = Expr::Literal(LiteralExpr::Nil); // null if not initialized
+        if self.expect(vec![Type::Equal]) {
             initializer = self.expression();
         }
         self.consume(Type::Semicolon, "Expect ';' after variable declaration");
@@ -175,13 +175,13 @@ impl<'a> Parser<'a> {
         //TODO: handle runtime errors here? result from consume?
         _ = self.consume(Type::Semicolon, "Expected ; after value.");
         //TODO: check if value is string in here?
-        return Statement::PrintSt(value)
+        return Statement::PrintSt(value);
     }
 
     fn expression_statement(&mut self) -> Statement {
         let expr: Expr = self.expression();
         _ = self.consume(Type::Semicolon, "Expected ; after value.");
-        return Statement::ExprSt(expr)
+        return Statement::ExprSt(expr);
     }
 
     /// a new block/scope
@@ -195,7 +195,7 @@ impl<'a> Parser<'a> {
     }
 }
 
-/* 
+/*
         Handling Expressions
 
 The Grammar rules sorted by precedence:
@@ -218,7 +218,7 @@ impl<'a> Parser<'a> {
     fn assignment(&mut self) -> Expr {
         let expr = self.equality();
         // we parse left side, if next is '=' then we know we are trying to assign:
-        if self.expect(vec![Type::Equal] ) {
+        if self.expect(vec![Type::Equal]) {
             //let equals = self.previous();
             let value = self.assignment();
             if let Expr::VarRead(var) = expr {
@@ -227,7 +227,7 @@ impl<'a> Parser<'a> {
             }
             return self.errorExpr("Invalid assignment target.");
         }
-        return expr
+        return expr;
     }
 
     fn equality(&mut self) -> Expr {
@@ -317,9 +317,10 @@ impl<'a> Parser<'a> {
                 Expr::Grouping(GroupingExpr {
                     expr: Box::new(expr),
                 })
-            },
-            Type::Identifier => Expr::VarRead(VarReadExpr{
-                name : self.previous().lexeme.to_string() }),
+            }
+            Type::Identifier => Expr::VarRead(VarReadExpr {
+                name: self.previous().lexeme.to_string(),
+            }),
 
             _ => {
                 // cant parse sucessuflly
@@ -341,7 +342,7 @@ impl<'a> Parser<'a> {
         // and then just return a Option<&Token>
         match self.check(typ) {
             true => Ok(self.advance()),
-            false => {Err(Err::Parser(msg.to_string(), self.peek().line))},
+            false => Err(Err::Parser(msg.to_string(), self.peek().line)),
         }
     }
 }
@@ -441,4 +442,3 @@ mod tests {
         assert!(ast.errors.len() == 0);
     }
 }
-

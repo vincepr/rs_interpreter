@@ -2,25 +2,24 @@
     The environment maps variable identifiers in our code to corresponding values.
 */
 
-use std::{collections::HashMap, rc::Rc, cell::RefCell};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::{types::{Err}, expressions::Expr};
-
+use crate::{expressions::Expr, types::Err};
 
 /// Every local scope ex: {} gets its own map for local variables/functions
 /// - to easily share the Environments we used a Rc (reference counted pointer) we can just clone
 /// - to mutate in a Rc we need to use a RefCell inside of it. To make that part mutable
-pub struct Environment{
-    /// The parent Scope {} we 'live in' 
-    pub enclosing: Option<Rc< Environment>>,     
+pub struct Environment {
+    /// The parent Scope {} we 'live in'
+    pub enclosing: Option<Rc<Environment>>,
     /// table to all our local variables
-    pub values: RefCell<HashMap<String, Expr>>,              
+    pub values: RefCell<HashMap<String, Expr>>,
 }
 
 impl Environment {
     pub fn new(enclosing: Option<Rc<Environment>>) -> Self {
         Environment {
-            enclosing: enclosing, 
+            enclosing: enclosing,
             values: RefCell::new(HashMap::new()),
         }
     }
@@ -30,20 +29,23 @@ impl Environment {
 
     /// define a variable like: 'var x = 12;' or 'var x;' -> x=nil
     /// - reassignment is allowed
-    pub fn define(&self, name: String, val: Expr){
+    pub fn define(&self, name: String, val: Expr) {
         self.values.borrow_mut().insert(name, val);
     }
 
     // read value of a variable like 'print x'
     pub fn get_value(&self, name: String) -> Result<Expr, Err> {
-        match self.values.borrow_mut().get(&name){
+        match self.values.borrow_mut().get(&name) {
             Some(val) => Ok(val.clone()),
             None => match &self.enclosing {
                 // if we cant find it localy we try move up to parent scope:
-                Some(encl_env) =>  encl_env.get_value(name),   
-                None => Err(Err::Interpreter("Undefined Variable: [TODO access line nr] .".into(), 69)),
+                Some(encl_env) => encl_env.get_value(name),
+                None => Err(Err::Interpreter(
+                    "Undefined Variable: [TODO access line nr] .".into(),
+                    69,
+                )),
                 //None => Err(Err::Interpreter("Undefined Variable: [".to_string()+name.lexeme+"] .", name.line)),
-            }
+            },
         }
     }
 
@@ -57,7 +59,10 @@ impl Environment {
             if let Some(enclosing_env) = &self.enclosing {
                 enclosing_env.assign(name, val)
             } else {
-                Err(Err::Interpreter("Can't write to Undefined Variable. [TODO access line nr]".to_string(), 69))
+                Err(Err::Interpreter(
+                    "Can't write to Undefined Variable. [TODO access line nr]".to_string(),
+                    69,
+                ))
             }
         }
     }

@@ -1,10 +1,13 @@
-use std::{rc::Rc};
+use std::rc::Rc;
 
 use crate::{
+    environment::Environment,
     expressions::{
-        BinaryExpr, Expr, Expr::*, GroupingExpr, LiteralExpr, LiteralExpr::*, UnaryExpr, VarAssignExpr, VarReadExpr,
+        BinaryExpr, Expr, Expr::*, GroupingExpr, LiteralExpr, LiteralExpr::*, UnaryExpr,
+        VarAssignExpr, VarReadExpr,
     },
-    types::TokenType, statements::{Statement}, environment::Environment,
+    statements::Statement,
+    types::TokenType,
 };
 
 /// Takes the root of the AST and evaluates it down to a result.
@@ -12,7 +15,7 @@ pub fn interpret(inputs: Vec<Statement>) {
     // envirnoment that holds reference to all variable-names-> values mapped:
     let global_scope = Rc::new(Environment::new(None));
 
-    for statement in inputs{
+    for statement in inputs {
         exececute(global_scope.clone(), statement);
     }
 }
@@ -27,7 +30,7 @@ fn exececute(scope: Rc<Environment>, statement: Statement) {
 }
 
 /// gets called from Statements-'visitorpattern'
-pub fn execute_block (parent_scope: Rc<Environment>, statements: Vec<Statement>) {
+pub fn execute_block(parent_scope: Rc<Environment>, statements: Vec<Statement>) {
     // create the new Scope:
     let local_scope = Rc::new(Environment::new(Some(parent_scope)));
 
@@ -86,7 +89,7 @@ impl VarAssignExpr {
 
 impl VarReadExpr {
     fn eval_with_env(&self, env: Rc<Environment>) -> Expr {
-        env.get_value(self.name.clone()).unwrap()       // TODO: we need to properly handle this err
+        env.get_value(self.name.clone()).unwrap() // TODO: we need to properly handle this err
     }
 }
 
@@ -175,7 +178,7 @@ fn division(left: Expr, token: TokenType, right: Expr) -> Expr {
 
 // helper function to evaluate BinaryExpr:
 fn addition(left: Expr, token: TokenType, right: Expr) -> Expr {
-        match (left, token, right) {
+    match (left, token, right) {
         // addition
         (Literal(Number(l)), TokenType::Plus, Literal(Number(r))) => Literal(Number(l + r)),
         // string concatinations:

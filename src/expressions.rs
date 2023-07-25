@@ -1,4 +1,4 @@
-use crate::{interpreter::RunErr, types::{TokenType}};
+use crate::{interpreter::RunErr, types::TokenType};
 
 // Collection of all Expressions. They are the building blocks of our AST
 // We expose those to our backend-interpreter AND middleend-parser
@@ -9,7 +9,7 @@ pub enum Expr {
     Unary(UnaryExpr),
     Binary(BinaryExpr),
     Grouping(GroupingExpr),
-    VarRead(VarReadExpr),    
+    VarRead(VarReadExpr),
     VarAssign(VarAssignExpr),
     /// When the Parser fails it creates a Stand in ErrorToken to continue parsing the rest
     ErrorExpr,
@@ -48,8 +48,11 @@ pub struct VarAssignExpr {
     pub value: Box<Expr>,
 }
 impl VarAssignExpr {
-    pub fn new(name: String, value:Expr) -> Self {
-        VarAssignExpr { name: name, value: Box::new(value) }
+    pub fn new(name: String, value: Expr) -> Self {
+        VarAssignExpr {
+            name: name,
+            value: Box::new(value),
+        }
     }
 }
 
@@ -79,10 +82,11 @@ impl std::fmt::Display for Expr {
             }
             Expr::Grouping(GroupingExpr { expr }) => f.write_fmt(format_args!("({expr})")),
             Expr::VarRead(VarReadExpr { name }) => name.fmt(f),
-            Expr::VarAssign(VarAssignExpr { name, value }) => f.write_fmt(format_args!("<{name} = {value}>")),
+            Expr::VarAssign(VarAssignExpr { name, value }) => {
+                f.write_fmt(format_args!("<{name} = {value}>"))
+            }
             Expr::RuntimeErr(e) => write!(f, "RuntimeErr({:?})", e),
             //_ => write!(f, "{:?}", self),             //Failback to Debug-Printing for unimplemented expressions?
         }
     }
 }
-

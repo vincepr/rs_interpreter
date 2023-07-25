@@ -23,9 +23,9 @@ impl std::fmt::Display for Err {
             Err::Parser(message, line) => {
                 f.write_fmt(format_args!("ParserERROR in line: {line} : {message}!"))
             }
-            Err::Interpreter(message, line) => {
-                f.write_fmt(format_args!("Interpreter-ERROR in line: {line} : {message}!"))
-            }
+            Err::Interpreter(message, line) => f.write_fmt(format_args!(
+                "Interpreter-ERROR in line: {line} : {message}!"
+            )),
         }
     }
 }
