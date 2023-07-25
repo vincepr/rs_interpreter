@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::{
     expressions::{
@@ -10,14 +10,10 @@ use crate::{
 /// Takes the root of the AST and evaluates it down to a result.
 pub fn interpret(inputs: Vec<Statement>) {
     // envirnoment that holds reference to all variable-names-> values mapped:
-    //let mut globalScope = crate::environment::Environment::new(None);
-    let mut global_scope = crate::environment::Environment{
-        enclosing: None ,
-        values: HashMap::new(),
-    };
+    let global_scope = Rc::new(Environment::new(None));
 
     for statement in inputs{
-        exececute(&mut global_scope, statement);
+        exececute(global_scope.clone(), statement);
     }
 }
 
@@ -25,21 +21,18 @@ pub fn interpret(inputs: Vec<Statement>) {
         Statements Execute, always end with a ;
 */
 
-fn exececute(scope: &mut Environment, statement: Statement) {
+fn exececute(scope: Rc<Environment>, statement: Statement) {
     // TODO: Here should be a good place to check for errors? check if we get an error then print that out or smth
     statement.execute(scope);
 }
 
 /// gets called from Statements-'visitorpattern'
-pub fn execute_block<'a>(parent_scope:&'a mut Environment<'a>, statements: Vec<Statement>) {
+pub fn execute_block (parent_scope: Rc<Environment>, statements: Vec<Statement>) {
     // create the new Scope:
-    //let mut  localScope = Environment::new(Some(parentScope));
-    let mut local_scope = crate::environment::Environment{
-        enclosing: Some(parent_scope) ,
-        values: HashMap::new(),
-    };
+    let local_scope = Rc::new(Environment::new(Some(parent_scope)));
+
     for statement in statements {
-        exececute(&mut local_scope, statement);
+        exececute(local_scope.clone(), statement);
     }
 }
 
@@ -63,12 +56,12 @@ pub enum RunErr {
 
 // interface to evaluate our expressions. (1+3 resolves to 4) => we keep 4 "and throw the rest away"
 trait Evaluates {
-    fn evaluated(&self, env: &mut Environment) -> Expr;
+    fn evaluated(&self, env: Rc<Environment>) -> Expr;
 }
 
 impl Expr {
     /// maps the visitor-patern like implementations of how diffferent expressions evaluate:
-    pub fn evaluated(&self, env: &mut Environment) -> Self {
+    pub fn evaluated(&self, env: Rc<Environment>) -> Self {
         match self {
             RuntimeErr(e) => RuntimeErr(e.clone()),
             ErrorExpr => ErrorExpr,
@@ -84,33 +77,33 @@ impl Expr {
 }
 
 impl VarAssignExpr {
-    fn eval_with_env(&self, env: &mut Environment) -> Expr {
-        let new_val = self.value.evaluated(env);
+    fn eval_with_env(&self, env: Rc<Environment>) -> Expr {
+        let new_val = self.value.evaluated(env.clone());
         env.assign(self.name.clone(), new_val.clone());
         return new_val;
     }
 }
 
 impl VarReadExpr {
-    fn eval_with_env(&self, env: &mut Environment) -> Expr {
+    fn eval_with_env(&self, env: Rc<Environment>) -> Expr {
         env.get_value(self.name.clone()).unwrap()       // TODO: we need to properly handle this err
     }
 }
 
 impl Evaluates for LiteralExpr {
-    fn evaluated(&self, env: &mut Environment) -> Expr {
+    fn evaluated(&self, env: Rc<Environment>) -> Expr {
         return Literal(self.clone());
     }
 }
 
 impl Evaluates for GroupingExpr {
-    fn evaluated(&self, env: &mut Environment) -> Expr {
+    fn evaluated(&self, env: Rc<Environment>) -> Expr {
         return self.expr.evaluated(env);
     }
 }
 
 impl Evaluates for UnaryExpr {
-    fn evaluated(&self, env: &mut Environment) -> Expr {
+    fn evaluated(&self, env: Rc<Environment>) -> Expr {
         let right = (*self.right).evaluated(env);
 
         match (self.token.clone(), right) {
@@ -124,8 +117,8 @@ impl Evaluates for UnaryExpr {
 }
 
 impl Evaluates for BinaryExpr {
-    fn evaluated(&self, env: &mut Environment) -> Expr {
-        let left = (*self.left).evaluated(env);
+    fn evaluated(&self, env: Rc<Environment>) -> Expr {
+        let left = (*self.left).evaluated(env.clone());
         let right = (*self.right).evaluated(env);
 
         match (left, self.token.clone(), right) {

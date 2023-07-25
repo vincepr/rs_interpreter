@@ -8,6 +8,8 @@
         - Represent blocks and local scope
 */
 
+use std::rc::Rc;
+
 use crate::{expressions::Expr,  environment::{Environment}};
 
 
@@ -23,7 +25,7 @@ pub enum Statement {
 
 impl Statement {
     /// visitor-like pattern that maps each Statment to its handler:
-    pub fn execute(self, current_env: &mut Environment) {
+    pub fn execute(self, current_env: Rc<Environment>) {
         match self {
             Statement::ExprSt(expr) => eval_expr_statement(expr, current_env),
             Statement::PrintSt(expr) => eval_print_statement(expr, current_env),
@@ -31,24 +33,23 @@ impl Statement {
             Statement::ErrStatementVariable => panic!("Hit Error Statement Variable"),
             Statement::BlockSt(statements) => {
                 eval_block_statement(statements, current_env);
-                panic!("//TODO: statments.rs BlockSt")
             },
         }
     }
 }
-fn eval_expr_statement(expr: Expr, env: &mut Environment){
+fn eval_expr_statement(expr: Expr, env: Rc<Environment>){
     expr.evaluated(env);   // our Trait-interface that will evaluate it down recursively
 }
-fn eval_print_statement(expr: Expr, env: &mut Environment){
+fn eval_print_statement(expr: Expr, env: Rc<Environment>){
     let res = expr.evaluated(env);
     println!("{res}");  // create the side-effect of print"res..."
 }
-fn eval_var_statement(name: String, initial_value: Expr ,  environment: &mut Environment) {
+fn eval_var_statement(name: String, initial_value: Expr ,  environment: Rc<Environment>) {
     // uninitialized will pass down a nil -> so they become nil;
-    let value = initial_value.evaluated(environment);
+    let value = initial_value.evaluated(environment.clone());
     environment.define(name, value);
 }
-fn eval_block_statement<'a> (statements: Vec<Statement>,  env: &'a mut Environment<'a>) {
+fn eval_block_statement (statements: Vec<Statement>,  env: Rc<Environment>) {
     crate::interpreter::execute_block(env, statements);
 }
 // fn eval_assign_statement(name: String, new_value: Expr ,  env: &mut Environment) {
