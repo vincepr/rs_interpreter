@@ -8,7 +8,7 @@
         - Represent blocks and local scope
 */
 
-use crate::{expressions::Expr, interpreter::Evaluates, environment::{Environment}};
+use crate::{expressions::Expr,  environment::{Environment}};
 
 
 #[derive(Debug, Clone, PartialEq)]
@@ -27,8 +27,8 @@ impl Statement {
     /// visitor-like pattern that maps each Statment to its handler:
     pub fn execute(self, currentEnv: &mut Environment) {
         match self {
-            Statement::ExprSt(expr) => eval_expr_statement(expr),
-            Statement::PrintSt(expr) => eval_print_statement(expr),
+            Statement::ExprSt(expr) => eval_expr_statement(expr, currentEnv),
+            Statement::PrintSt(expr) => eval_print_statement(expr, currentEnv),
             Statement::VariableSt(name, initialValue) => eval_var_statement(name, initialValue, currentEnv),
             Statement::AssignSt(name, newValue) => eval_assign_statement(name, newValue, currentEnv),
             Statement::ErrStatementVariable => panic!("Hit Error Statement Variable"),
@@ -38,25 +38,25 @@ impl Statement {
         }
     }
 }
-fn eval_expr_statement(expr: Expr){
-    expr.evaluated();   // our Trait-interface that will evaluate it down recursively
+fn eval_expr_statement(expr: Expr, env: &mut Environment){
+    expr.evaluated(env);   // our Trait-interface that will evaluate it down recursively
 }
-fn eval_print_statement(expr: Expr){
-    let res = expr.evaluated();
+fn eval_print_statement(expr: Expr, env: &mut Environment){
+    let res = expr.evaluated(env);
     println!("{res}");  // create the side-effect of print"res..."
 }
-fn eval_var_statement(name: String, initialValue: Expr ,  environment: &mut Environment) {
+fn eval_var_statement(name: String, initial_value: Expr ,  environment: &mut Environment) {
     // uninitialized will pass down a nil -> so they become nil;
-    let value = initialValue.evaluated();
+    let value = initial_value.evaluated(environment);
     environment.define(name, value);
 }
-fn eval_block_statement<'a> (statements: Vec<Statement>,  environment: &'a mut Environment<'a>) {
-    crate::interpreter::executeBlock(environment, statements);
+fn eval_block_statement<'a> (statements: Vec<Statement>,  env: &'a mut Environment<'a>) {
+    crate::interpreter::execute_block(env, statements);
 }
-fn eval_assign_statement(name: String, newValue: Expr ,  environment: &mut Environment) {
+fn eval_assign_statement(name: String, new_value: Expr ,  env: &mut Environment) {
     // uninitialized will pass down a nil -> so they become nil;
-    let value = newValue.evaluated();
-    environment.assign(name, value);
+    let value = new_value.evaluated(env);
+    env.assign(name, value);
 }
 
 

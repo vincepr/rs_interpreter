@@ -1,2 +1,3 @@
 var beverage = "espresso";
-print beverage;
+beverage = beverage + beverage;
+print beverage + 123;

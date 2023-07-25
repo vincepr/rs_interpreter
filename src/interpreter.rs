@@ -11,13 +11,13 @@ use crate::{
 pub fn interpret(inputs: Vec<Statement>) {
     // envirnoment that holds reference to all variable-names-> values mapped:
     //let mut globalScope = crate::environment::Environment::new(None);
-    let mut globalScope = crate::environment::Environment{
+    let mut global_scope = crate::environment::Environment{
         enclosing: None ,
         values: HashMap::new(),
     };
 
     for statement in inputs{
-        exececute(&mut globalScope, statement);
+        exececute(&mut global_scope, statement);
     }
 }
 
@@ -31,15 +31,15 @@ fn exececute(scope: &mut Environment, statement: Statement) {
 }
 
 /// gets called from Statements-'visitorpattern'
-pub fn executeBlock<'a>(parentScope:&'a mut Environment<'a>, statements: Vec<Statement>) {
+pub fn execute_block<'a>(parent_scope:&'a mut Environment<'a>, statements: Vec<Statement>) {
     // create the new Scope:
     //let mut  localScope = Environment::new(Some(parentScope));
-    let mut localScope = crate::environment::Environment{
-        enclosing: Some(parentScope) ,
+    let mut local_scope = crate::environment::Environment{
+        enclosing: Some(parent_scope) ,
         values: HashMap::new(),
     };
     for statement in statements {
-        exececute(&mut localScope, statement);
+        exececute(&mut local_scope, statement);
     }
 }
 
@@ -62,53 +62,56 @@ pub enum RunErr {
 }
 
 // interface to evaluate our expressions. (1+3 resolves to 4) => we keep 4 "and throw the rest away"
-pub trait Evaluates {
-    fn evaluated(&self) -> Expr;
+trait Evaluates {
+    fn evaluated(&self, env: &mut Environment) -> Expr;
 }
 
-impl Evaluates for Expr {
-    fn evaluated(&self) -> Self {
+impl Expr {
+    /// maps the visitor-patern like implementations of how different expressions evaluate:
+    pub fn evaluated(&self, env: &mut Environment) -> Self {
         match self {
             RuntimeErr(e) => RuntimeErr(e.clone()),
             ErrorExpr => ErrorExpr,
-            Literal(expr) => expr.evaluated(),
-            Grouping(expr) => expr.evaluated(),
-            Unary(expr) => expr.evaluated(),
-            Binary(expr) => expr.evaluated(),
+            Literal(expr) => expr.evaluated(env),
+            Grouping(expr) => expr.evaluated(env),
+            Unary(expr) => expr.evaluated(env),
+            Binary(expr) => expr.evaluated(env),
 
-            VarAssign(expr) => expr.evaluated(),
-            VarRead(expr) => expr.evaluated(),
+            VarAssign(expr) => expr.eval_with_env(env),
+            VarRead(expr) => expr.eval_with_env(env),
         }
     }
 }
 
-impl Evaluates for VarAssignExpr {
-    fn evaluated(&self) -> Expr {
-        !todo!()
+impl VarAssignExpr {
+    fn eval_with_env(&self, env: &mut Environment) -> Expr {
+        let new_val = self.value.evaluated(env);
+        env.assign(self.name.clone(), *self.value.clone());
+        return new_val;
     }
 }
 
-impl Evaluates for VarReadExpr {
-    fn evaluated(&self) -> Expr {
-        !todo!()
+impl VarReadExpr {
+    fn eval_with_env(&self, env: &mut Environment) -> Expr {
+        env.get_value(self.name.clone()).unwrap()       // TODO: we need to properly handle this err
     }
 }
 
 impl Evaluates for LiteralExpr {
-    fn evaluated(&self) -> Expr {
+    fn evaluated(&self, env: &mut Environment) -> Expr {
         return Literal(self.clone());
     }
 }
 
 impl Evaluates for GroupingExpr {
-    fn evaluated(&self) -> Expr {
-        return self.expr.evaluated();
+    fn evaluated(&self, env: &mut Environment) -> Expr {
+        return self.expr.evaluated(env);
     }
 }
 
 impl Evaluates for UnaryExpr {
-    fn evaluated(&self) -> Expr {
-        let right = (*self.right).evaluated();
+    fn evaluated(&self, env: &mut Environment) -> Expr {
+        let right = (*self.right).evaluated(env);
 
         match (self.token.clone(), right) {
             (TokenType::Minus, Literal(Number(nr))) => Literal(Number(-nr)),
@@ -121,9 +124,9 @@ impl Evaluates for UnaryExpr {
 }
 
 impl Evaluates for BinaryExpr {
-    fn evaluated(&self) -> Expr {
-        let left = (*self.left).evaluated();
-        let right = (*self.right).evaluated();
+    fn evaluated(&self, env: &mut Environment) -> Expr {
+        let left = (*self.left).evaluated(env);
+        let right = (*self.right).evaluated(env);
 
         match (left, self.token.clone(), right) {
             (left, TokenType::Minus, right) => subtraction(left, TokenType::Minus, right),
@@ -227,13 +230,19 @@ mod tests {
     use super::*;
     // some quick integration testing:
     fn test(input: &str, expected: Expr){
+        //
+        let mut global_scope = crate::environment::Environment{
+            enclosing: None ,
+            values: HashMap::new(),
+        };
+        //
         let s = lexer::new_scanner(input);
         let (tokens, lexer_errs) = s.results();
         let ast = AST::new(tokens);
         let statements = ast.root;
         for s in statements{
             if let Statement::ExprSt(expr) = s{
-                let res = expr.evaluated();
+                let res = expr.evaluated(&mut global_scope);
                 assert_eq!(res, expected);
             }else { panic!("expected a Expression that evaluates!")}
             assert!(lexer_errs.len() == 0);
