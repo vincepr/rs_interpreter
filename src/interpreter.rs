@@ -224,10 +224,7 @@ mod tests {
     // some quick integration testing:
     fn test(input: &str, expected: Expr){
         //
-        let mut global_scope = crate::environment::Environment{
-            enclosing: None ,
-            values: HashMap::new(),
-        };
+        let global_scope = Rc::new(crate::environment::Environment::new(None));
         //
         let s = lexer::new_scanner(input);
         let (tokens, lexer_errs) = s.results();
@@ -235,7 +232,7 @@ mod tests {
         let statements = ast.root;
         for s in statements{
             if let Statement::ExprSt(expr) = s{
-                let res = expr.evaluated(&mut global_scope);
+                let res = expr.evaluated(global_scope.clone());
                 assert_eq!(res, expected);
             }else { panic!("expected a Expression that evaluates!")}
             assert!(lexer_errs.len() == 0);
