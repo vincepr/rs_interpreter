@@ -23,13 +23,14 @@ pub enum Statement {
 
 impl Statement {
     /// visitor-like pattern that maps each Statment to its handler:
-    pub fn execute(self, currentEnv: &mut Environment) {
+    pub fn execute(self, current_env: &mut Environment) {
         match self {
-            Statement::ExprSt(expr) => eval_expr_statement(expr, currentEnv),
-            Statement::PrintSt(expr) => eval_print_statement(expr, currentEnv),
-            Statement::VariableSt(name, initialValue) => eval_var_statement(name, initialValue, currentEnv),
+            Statement::ExprSt(expr) => eval_expr_statement(expr, current_env),
+            Statement::PrintSt(expr) => eval_print_statement(expr, current_env),
+            Statement::VariableSt(name, initial_value) => eval_var_statement(name, initial_value, current_env),
             Statement::ErrStatementVariable => panic!("Hit Error Statement Variable"),
             Statement::BlockSt(statements) => {
+                eval_block_statement(statements, current_env);
                 panic!("//TODO: statments.rs BlockSt")
             },
         }
@@ -50,11 +51,11 @@ fn eval_var_statement(name: String, initial_value: Expr ,  environment: &mut Env
 fn eval_block_statement<'a> (statements: Vec<Statement>,  env: &'a mut Environment<'a>) {
     crate::interpreter::execute_block(env, statements);
 }
-fn eval_assign_statement(name: String, new_value: Expr ,  env: &mut Environment) {
-    // uninitialized will pass down a nil -> so they become nil;
-    let value = new_value.evaluated(env);
-    env.assign(name, value);
-}
+// fn eval_assign_statement(name: String, new_value: Expr ,  env: &mut Environment) {
+//     // uninitialized will pass down a nil -> so they become nil;
+//     let value = new_value.evaluated(env);
+//     env.assign(name, value);
+// }
 
 
 
