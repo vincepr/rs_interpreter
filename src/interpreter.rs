@@ -94,7 +94,7 @@ impl VarReadExpr {
 }
 
 impl Evaluates for LiteralExpr {
-    fn evaluated(&self, env: Rc<Environment>) -> Expr {
+    fn evaluated(&self, _env: Rc<Environment>) -> Expr {
         return Literal(self.clone());
     }
 }

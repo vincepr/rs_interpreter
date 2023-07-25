@@ -124,7 +124,7 @@ impl<'a> Parser<'a> {
     }
 
     /// pushes error msg to the stack of errors, also returns a Error-Expression
-    fn errorExpr(&mut self, msg: &str) -> Expr {
+    fn error_expr(&mut self, msg: &str) -> Expr {
         // cant parse sucessuflly
         self.errors.push(Err::Parser(msg.into(), self.peek().line));
         Expr::ErrorExpr
@@ -225,7 +225,7 @@ impl<'a> Parser<'a> {
                 let name = var.name;
                 return Expr::VarAssign(VarAssignExpr::new(name, value));
             }
-            return self.errorExpr("Invalid assignment target.");
+            return self.error_expr("Invalid assignment target.");
         }
         return expr;
     }
