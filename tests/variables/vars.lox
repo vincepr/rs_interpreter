@@ -1,6 +1,6 @@
 var beverage = "espresso";
 beverage = 10+10+10;
-print ""+ beverage +"|" +30;
+print ""+ beverage +"|" +30;  // expect: 30|30
 
 var a = "global a";
 var b = "global b";
