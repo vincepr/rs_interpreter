@@ -16,12 +16,10 @@ pub enum Statement {
     ExprSt(Expr),
     PrintSt(Expr),
     VariableSt(String, Expr),
-    AssignSt(String, Expr),
     BlockSt(Vec<Statement>),
     ErrStatementVariable,
 }
 
-pub struct AssignSt <'a> (crate::types::Token <'a>, Expr);
 
 impl Statement {
     /// visitor-like pattern that maps each Statment to its handler:
@@ -30,7 +28,6 @@ impl Statement {
             Statement::ExprSt(expr) => eval_expr_statement(expr, currentEnv),
             Statement::PrintSt(expr) => eval_print_statement(expr, currentEnv),
             Statement::VariableSt(name, initialValue) => eval_var_statement(name, initialValue, currentEnv),
-            Statement::AssignSt(name, newValue) => eval_assign_statement(name, newValue, currentEnv),
             Statement::ErrStatementVariable => panic!("Hit Error Statement Variable"),
             Statement::BlockSt(statements) => {
                 panic!("//TODO: statments.rs BlockSt")

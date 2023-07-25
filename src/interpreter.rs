@@ -67,7 +67,7 @@ trait Evaluates {
 }
 
 impl Expr {
-    /// maps the visitor-patern like implementations of how different expressions evaluate:
+    /// maps the visitor-patern like implementations of how diffferent expressions evaluate:
     pub fn evaluated(&self, env: &mut Environment) -> Self {
         match self {
             RuntimeErr(e) => RuntimeErr(e.clone()),
@@ -86,7 +86,7 @@ impl Expr {
 impl VarAssignExpr {
     fn eval_with_env(&self, env: &mut Environment) -> Expr {
         let new_val = self.value.evaluated(env);
-        env.assign(self.name.clone(), *self.value.clone());
+        env.assign(self.name.clone(), new_val.clone());
         return new_val;
     }
 }
@@ -182,7 +182,7 @@ fn division(left: Expr, token: TokenType, right: Expr) -> Expr {
 
 // helper function to evaluate BinaryExpr:
 fn addition(left: Expr, token: TokenType, right: Expr) -> Expr {
-    match (left, token, right) {
+        match (left, token, right) {
         // addition
         (Literal(Number(l)), TokenType::Plus, Literal(Number(r))) => Literal(Number(l + r)),
         // string concatinations:

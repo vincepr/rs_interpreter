@@ -219,9 +219,9 @@ impl<'a> Parser<'a> {
         let expr = self.equality();
         // we parse left side, if next is '=' then we know we are trying to assign:
         if self.expect(vec![Type::Equal] ) {
-            let equals = self.previous();
+            //let equals = self.previous();
             let value = self.assignment();
-            if let Expr::VarAssign(var) = expr {
+            if let Expr::VarRead(var) = expr {
                 let name = var.name;
                 return Expr::VarAssign(VarAssignExpr::new(name, value));
             }
