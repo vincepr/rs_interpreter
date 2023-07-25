@@ -1,3 +1,0 @@
-print"one";
-print true==false;
-print 2 + 2*6;

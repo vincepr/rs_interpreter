@@ -4,5 +4,7 @@ The book [Crafting Interpreters](https://craftinginterpreters.com/contents.html)
 
 ## usage:
 ```
-cargo run ./test/vars.txt
+make build
+make run
+make test
 ```
