@@ -3,7 +3,7 @@ build:
 	cargo build --release
 
 run: 
-	cargo run ./test/vars.txt
+	cargo run ./tests/test.lox
 
 test: build
 	cargo test
