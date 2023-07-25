@@ -39,4 +39,4 @@ jobs:
             ${{ runner.os }}-cargo-target
         
       - name: Run Tests
-        run: cargo test
+        run: make test
