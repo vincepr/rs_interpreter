@@ -234,7 +234,7 @@ fn comparison(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
 }
 
 // helper function to evaluate BinaryExpr:
-fn is_equal(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
+pub fn is_equal(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
     match (left, token, right) {
         (l, TokenType::ExclamationEqual, r) => Ok(Literal(Boolean(l != r))),
         (l, TokenType::EqualEqual, r) => Ok(Literal(Boolean(l == r))),

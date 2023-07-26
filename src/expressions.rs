@@ -66,7 +66,7 @@ impl std::fmt::Display for Expr {
         match self {
             //Expr::ErrorExpr => f.write_str("ErrorExpr"),
             Expr::Literal(LiteralExpr::Boolean(b)) => b.fmt(f),
-            Expr::Literal(LiteralExpr::Nil) => f.write_str("Nil"),
+            Expr::Literal(LiteralExpr::Nil) => f.write_str("nil"),
             Expr::Literal(LiteralExpr::String(s)) => s.fmt(f),
             Expr::Literal(LiteralExpr::Number(n)) => n.fmt(f),
 

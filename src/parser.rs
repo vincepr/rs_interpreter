@@ -167,6 +167,9 @@ impl<'a> Parser<'a> {
     }
 
     fn statement(&mut self) -> Result<Statement, Err> {
+        if self.expect(vec![Type::If]) {
+            return self.if_statement();
+        }
         if self.expect(vec![Type::Print]) {
             return self.print_statement();
         }
@@ -174,6 +177,27 @@ impl<'a> Parser<'a> {
             return Ok(Statement::BlockSt(self.block()));
         }
         return self.expression_statement();
+    }
+
+    fn if_statement(&mut self) -> Result<Statement, Err> {
+        _ = self.consume(Type::OpenParen, "Expect '(' after 'if'.")?;
+        let condition = self.expression()?;
+        _ = self.consume(Type::CloseParen, "Expect ')' after 'if' condition.")?;
+
+        let then_ = self.statement()?;
+        if self.expect(vec![Type::Else]) {
+            let else_ = Some(Box::new(self.statement()?));
+            return Ok(Statement::IfSt {
+                condition: condition,
+                then_: Box::new(then_),
+                else_: else_,
+            });
+        }
+        return Ok(Statement::IfSt {
+            condition: condition,
+            then_: Box::new(then_),
+            else_: None,
+        });
     }
 
     fn print_statement(&mut self) -> Result<Statement, Err> {

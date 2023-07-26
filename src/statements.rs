@@ -10,7 +10,12 @@
 
 use std::rc::Rc;
 
-use crate::{environment::Environment, expressions::Expr, types::Err};
+use crate::{
+    environment::Environment,
+    expressions::{Expr, LiteralExpr},
+    interpreter::{execute_block, is_equal},
+    types::Err,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
@@ -18,20 +23,29 @@ pub enum Statement {
     PrintSt(Expr),
     VariableSt(String, Expr),
     BlockSt(Vec<Result<Statement, Err>>),
-    //ErrStatementVariable,
+    /// If Statement: condition, thenBranch, elseBranch
+    IfSt {
+        condition: Expr,
+        then_: Box<Statement>,
+        else_: Option<Box<Statement>>,
+    },
 }
 
 impl Statement {
     /// visitor-like pattern that maps each Statment to its handler:
     pub fn execute(self, current_env: Rc<Environment>) -> Result<(), Err> {
         match self {
-            Statement::ExprSt(expr) => execute_expr_statement(expr, current_env),
-            Statement::PrintSt(expr) => execute_print_statement(expr, current_env),
-            Statement::VariableSt(name, initial_value) => {
+            Self::ExprSt(expr) => execute_expr_statement(expr, current_env),
+            Self::PrintSt(expr) => execute_print_statement(expr, current_env),
+            Self::VariableSt(name, initial_value) => {
                 execuate_var_statement(name, initial_value, current_env)
             }
-            //Statement::ErrStatementVariable => panic!("Hit Error Statement Variable"),
-            Statement::BlockSt(statements) => execute_block_statement(statements, current_env),
+            Self::BlockSt(statements) => execute_block_statement(statements, current_env),
+            Self::IfSt {
+                condition,
+                then_,
+                else_,
+            } => execute_if_statement(condition, then_, else_, current_env),
         }
     }
 }
@@ -62,8 +76,30 @@ fn execute_block_statement(
     statements: Vec<Result<Statement, Err>>,
     env: Rc<Environment>,
 ) -> Result<(), Err> {
-    crate::interpreter::execute_block(env, statements);
+    execute_block(env, statements);
     Ok(())
+}
+
+fn execute_if_statement(
+    condition: Expr,
+    then_: Box<Statement>,
+    else_: Option<Box<Statement>>,
+    env: Rc<Environment>,
+) -> Result<(), Err> {
+    if is_truthy(condition.evaluated(env.clone())?) {
+        then_.execute(env)?;
+    } else if let Some(else_branch) = else_ {
+        else_branch.execute(env)?;
+    }
+    Ok(())
+}
+
+// helper function to compare expression for truthiness: (ex: if "string" {...})
+fn is_truthy(expr: Expr) -> bool {
+    match expr {
+        Expr::Literal(LiteralExpr::Boolean(b)) => b,
+        _ => return false,
+    }
 }
 
 // fn eval_assign_statement(name: String, new_value: Expr ,  env: &mut Environment) {
