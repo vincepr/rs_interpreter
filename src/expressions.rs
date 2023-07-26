@@ -1,4 +1,4 @@
-use crate::{interpreter::RunErr, types::{TokenType}};
+use crate::types::TokenType;
 
 // Collection of all Expressions. They are the building blocks of our AST
 // We expose those to our backend-interpreter AND middleend-parser
@@ -9,12 +9,8 @@ pub enum Expr {
     Unary(UnaryExpr),
     Binary(BinaryExpr),
     Grouping(GroupingExpr),
-    VarRead(VarReadExpr),    
+    VarRead(VarReadExpr),
     VarAssign(VarAssignExpr),
-    /// When the Parser fails it creates a Stand in ErrorToken to continue parsing the rest
-    ErrorExpr,
-    /// Run time Errors that happen in the Interpreter
-    RuntimeErr(RunErr),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -48,8 +44,11 @@ pub struct VarAssignExpr {
     pub value: Box<Expr>,
 }
 impl VarAssignExpr {
-    pub fn new(name: String, value:Expr) -> Self {
-        VarAssignExpr { name: name, value: Box::new(value) }
+    pub fn new(name: String, value: Expr) -> Self {
+        VarAssignExpr {
+            name: name,
+            value: Box::new(value),
+        }
     }
 }
 
@@ -65,7 +64,7 @@ pub enum LiteralExpr {
 impl std::fmt::Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Expr::ErrorExpr => f.write_str("ErrorExpr"),
+            //Expr::ErrorExpr => f.write_str("ErrorExpr"),
             Expr::Literal(LiteralExpr::Boolean(b)) => b.fmt(f),
             Expr::Literal(LiteralExpr::Nil) => f.write_str("Nil"),
             Expr::Literal(LiteralExpr::String(s)) => s.fmt(f),
@@ -79,10 +78,10 @@ impl std::fmt::Display for Expr {
             }
             Expr::Grouping(GroupingExpr { expr }) => f.write_fmt(format_args!("({expr})")),
             Expr::VarRead(VarReadExpr { name }) => name.fmt(f),
-            Expr::VarAssign(VarAssignExpr { name, value }) => f.write_fmt(format_args!("<{name} = {value}>")),
-            Expr::RuntimeErr(e) => write!(f, "RuntimeErr({:?})", e),
-            //_ => write!(f, "{:?}", self),             //Failback to Debug-Printing for unimplemented expressions?
+            Expr::VarAssign(VarAssignExpr { name, value }) => {
+                f.write_fmt(format_args!("<{name} = {value}>"))
+            } //Expr::RuntimeErr(e) => write!(f, "RuntimeErr({:?})", e),
+              //_ => write!(f, "{:?}", self),             //Failback to Debug-Printing for unimplemented expressions?
         }
     }
 }
-

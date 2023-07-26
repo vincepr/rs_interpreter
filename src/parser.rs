@@ -1,8 +1,11 @@
 use std::mem;
 
 use crate::{
-    expressions::{BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr, VarAssignExpr, VarReadExpr},
-    types::{Err, Token, TokenType as Type}, statements::{Statement},
+    expressions::{
+        BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr, VarAssignExpr, VarReadExpr,
+    },
+    statements::Statement,
+    types::{Err, Token, TokenType as Type},
 };
 
 /*
@@ -15,7 +18,7 @@ use crate::{
 #[derive(Debug)]
 pub struct AST {
     pub errors: Vec<Err>,
-    pub root: Vec<Statement>,
+    pub root: Vec<Result<Statement, Err>>,
 }
 impl AST {
     /// parses a new AST (Abstract-Syntax-Tree) from a flat array of Token provided by the lexer/scanner
@@ -38,8 +41,15 @@ impl AST {
     pub fn print(&self) -> String {
         use std::fmt::Write;
         let mut str = String::new();
-        for n in &self.root{
-            let _ = write!(&mut str, "{}", n);
+        for res in &self.root {
+            match res {
+                Ok(statement) => {
+                    let _ = write!(&mut str, "{}", statement);
+                }
+                Result::Err(e) => {
+                    let _ = write!(&mut str, "{}", e);
+                }
+            }
         }
         return str;
     }
@@ -49,7 +59,7 @@ struct Parser<'a> {
     /// List of all Tokens we parse
     tokens: &'a Vec<Token<'a>>,
     /// Index to current token
-    current: usize,             
+    current: usize,
     errors: Vec<Err>,
 }
 impl<'a> Parser<'a> {
@@ -61,12 +71,12 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse(&mut self) -> Vec<Statement> {
+    fn parse(&mut self) -> Vec<Result<Statement, Err>> {
         let mut statements = vec![];
         while !self.is_at_end() {
             statements.push(self.declaration());
         }
-        return statements
+        return statements;
     }
 }
 
@@ -121,81 +131,77 @@ impl<'a> Parser<'a> {
     }
 
     /// pushes error msg to the stack of errors, also returns a Error-Expression
-    fn errorExpr(&mut self, msg: &str) -> Expr {
-        // cant parse sucessuflly
-        self.errors.push(Err::Parser(
-            msg.into(),
-            self.peek().line,
-        ));
-        Expr::ErrorExpr
+    fn error_expr(&mut self, msg: &str) -> Err {
+        self.errors.push(Err::Parser(msg.into(), self.peek().line));
+        Err::Parser(msg.into(), self.peek().line)
     }
 }
 
-/* 
-        Handling Statements 
+/*
+        Handling Statements
 */
 
 impl<'a> Parser<'a> {
-    fn declaration(&mut self) -> Statement {
+    fn declaration(&mut self) -> Result<Statement, Err> {
         //TODO crafting interpreters handles runtime errors here, decide where i want to if it fails it does synchronize() and return null.
-        if self.expect(vec![Type::Var]){
+        if self.expect(vec![Type::Var]) {
             return self.var_declaration();
         }
         return self.statement();
     }
 
     /// var IDENTIFIER optionalINITIALVALUE ;
-    fn var_declaration(&mut self) -> Statement {
+    fn var_declaration(&mut self) -> Result<Statement, Err> {
         let name: String;
-        if let Ok(token) = self.consume(Type::Identifier, "Expected variable name after var"){
+        if let Ok(token) = self.consume(Type::Identifier, "Expected variable name after var") {
             name = token.lexeme.to_string();
         } else {
-            return Statement::ErrStatementVariable;
+            return Err(Err::Parser("Expected variable name after var".into(), 8));
         }
-        let mut initializer = Expr::Literal(LiteralExpr::Nil);  // null if not initialized
-        if self.expect(vec![Type::Equal]){
-            initializer = self.expression();
+        let mut initializer = Expr::Literal(LiteralExpr::Nil); // null if not initialized
+        if self.expect(vec![Type::Equal]) {
+            initializer = self.expression()?;
         }
-        self.consume(Type::Semicolon, "Expect ';' after variable declaration");
-        return Statement::VariableSt(name, initializer);
+        self.consume(Type::Semicolon, "Expect ';' after variable declaration")?;
+        return Ok(Statement::VariableSt(name, initializer));
     }
 
-    fn statement(&mut self) -> Statement {
+    fn statement(&mut self) -> Result<Statement, Err> {
         if self.expect(vec![Type::Print]) {
             return self.print_statement();
         }
         if self.expect(vec![Type::OpenBrace]) {
-            return Statement::BlockSt(self.block());
+            return Ok(Statement::BlockSt(self.block()));
         }
         return self.expression_statement();
     }
 
-    fn print_statement(&mut self) -> Statement {
-        let value: Expr = self.expression();
-        //TODO: handle runtime errors here? result from consume?
-        _ = self.consume(Type::Semicolon, "Expected ; after value.");
-        //TODO: check if value is string in here?
-        return Statement::PrintSt(value)
+    fn print_statement(&mut self) -> Result<Statement, Err> {
+        let value: Expr = self.expression()?;
+        _ = self.consume(Type::Semicolon, "Expected ; after value.")?;
+        return Ok(Statement::PrintSt(value));
     }
 
-    fn expression_statement(&mut self) -> Statement {
-        let expr: Expr = self.expression();
-        _ = self.consume(Type::Semicolon, "Expected ; after value.");
-        return Statement::ExprSt(expr)
+    fn expression_statement(&mut self) -> Result<Statement, Err> {
+        let expr: Expr = self.expression()?;
+        _ = self.consume(Type::Semicolon, "Expected ; after value.")?;
+        return Ok(Statement::ExprSt(expr));
     }
 
     /// a new block/scope
-    fn block(&mut self) -> Vec<Statement> {
-        let mut statements = Vec::<Statement>::new();
+    fn block(&mut self) -> Vec<Result<Statement, Err>> {
+        let mut statements = Vec::<Result<Statement, Err>>::new();
         while !self.check(Type::CloseBrace) && !self.is_at_end() {
             statements.push(self.declaration());
         }
-        self.consume(Type::CloseBrace, "Expect '}' after block.");
+        if let Err(did_err) = self.consume(Type::CloseBrace, "Expect '}' after block.") {
+            statements.push(Err(did_err));
+        }
         return statements;
     }
 }
 
-/* 
+/*
         Handling Expressions
 
 The Grammar rules sorted by precedence:
@@ -211,40 +217,38 @@ The Grammar rules sorted by precedence:
 */
 
 impl<'a> Parser<'a> {
-    fn expression(&mut self) -> Expr {
+    fn expression(&mut self) -> Result<Expr, Err> {
         self.assignment()
     }
 
-    fn assignment(&mut self) -> Expr {
+    fn assignment(&mut self) -> Result<Expr, Err> {
         let expr = self.equality();
         // we parse left side, if next is '=' then we know we are trying to assign:
-        if self.expect(vec![Type::Equal] ) {
+        if self.expect(vec![Type::Equal]) {
             //let equals = self.previous();
             let value = self.assignment();
-            if let Expr::VarRead(var) = expr {
+            if let Expr::VarRead(var) = expr? {
                 let name = var.name;
-                return Expr::VarAssign(VarAssignExpr::new(name, value));
+                return Ok(Expr::VarAssign(VarAssignExpr::new(name, value?)));
             }
-            return self.errorExpr("Invalid assignment target.");
+            return Err(self.error_expr("Invalid assignment target."));
         }
-        return expr
+        return expr;
     }
 
-    fn equality(&mut self) -> Expr {
+    fn equality(&mut self) -> Result<Expr, Err> {
         let mut expr = self.comparison();
-
-        // TODO: refactor this with proper enums && equality-> Some(Expr) instead!
         while self.expect(vec![Type::ExclamationEqual, Type::EqualEqual]) {
-            expr = Expr::Binary(BinaryExpr {
-                left: Box::new(expr),
+            expr = Ok(Expr::Binary(BinaryExpr {
+                left: Box::new(expr?),
                 token: self.previous().typ.clone(),
-                right: Box::new(self.comparison()),
-            });
+                right: Box::new(self.comparison()?),
+            }));
         }
         expr
     }
 
-    fn comparison(&mut self) -> Expr {
+    fn comparison(&mut self) -> Result<Expr, Err> {
         let mut expr = self.term();
 
         while self.expect(vec![
@@ -253,73 +257,74 @@ impl<'a> Parser<'a> {
             Type::Less,
             Type::LessEqual,
         ]) {
-            expr = Expr::Binary(BinaryExpr {
-                left: Box::new(expr),
+            expr = Ok(Expr::Binary(BinaryExpr {
+                left: Box::new(expr?),
                 token: self.previous().typ.clone(),
-                right: Box::new(self.term()),
-            });
+                right: Box::new(self.term()?),
+            }));
         }
         expr
     }
 
-    fn term(&mut self) -> Expr {
+    fn term(&mut self) -> Result<Expr, Err> {
         let mut expr = self.factor();
 
         while self.expect(vec![Type::Minus, Type::Plus]) {
-            expr = Expr::Binary(BinaryExpr {
-                left: Box::new(expr),
+            expr = Ok(Expr::Binary(BinaryExpr {
+                left: Box::new(expr?),
                 token: self.previous().typ.clone(),
-                right: Box::new(self.factor()),
-            });
+                right: Box::new(self.factor()?),
+            }));
         }
         expr
     }
 
-    fn factor(&mut self) -> Expr {
+    fn factor(&mut self) -> Result<Expr, Err> {
         let mut expr = self.unary();
 
         while self.expect(vec![Type::Slash, Type::Star]) {
-            expr = Expr::Binary(BinaryExpr {
-                left: Box::new(expr),
+            expr = Ok(Expr::Binary(BinaryExpr {
+                left: Box::new(expr?),
                 token: self.previous().typ.clone(),
-                right: Box::new(self.unary()),
-            });
+                right: Box::new(self.unary()?),
+            }));
         }
         expr
     }
 
-    fn unary(&mut self) -> Expr {
+    fn unary(&mut self) -> Result<Expr, Err> {
         if self.expect(vec![Type::Exclamation, Type::Minus]) {
-            return Expr::Unary(UnaryExpr {
+            return Ok(Expr::Unary(UnaryExpr {
                 token: self.previous().typ.clone(),
-                right: Box::new(self.unary()),
-            });
+                right: Box::new(self.unary()?),
+            }));
         }
         self.primary()
     }
 
-    fn primary(&mut self) -> Expr {
+    fn primary(&mut self) -> Result<Expr, Err> {
         self.advance();
         match &self.previous().typ {
-            Type::True => Expr::Literal(LiteralExpr::Boolean(true)),
-            Type::False => Expr::Literal(LiteralExpr::Boolean(false)),
-            Type::Nil => Expr::Literal(LiteralExpr::Nil),
-            Type::Number(nr) => Expr::Literal(LiteralExpr::Number(*nr)),
-            Type::String(st) => Expr::Literal(LiteralExpr::String(st.clone())),
+            Type::True => Ok(Expr::Literal(LiteralExpr::Boolean(true))),
+            Type::False => Ok(Expr::Literal(LiteralExpr::Boolean(false))),
+            Type::Nil => Ok(Expr::Literal(LiteralExpr::Nil)),
+            Type::Number(nr) => Ok(Expr::Literal(LiteralExpr::Number(*nr))),
+            Type::String(st) => Ok(Expr::Literal(LiteralExpr::String(st.clone()))),
             Type::OpenParen => {
                 let expr = self.expression(); // back to the top and parse what is inside the parenthesis
                 if let Err(e) =
                     self.consume(Type::CloseParen, "Expect closing: ')' after expression.")
                 {
-                    //panic!("here");
-                    self.errors.push(e);
-                }; // need closing parenthesis
-                Expr::Grouping(GroupingExpr {
-                    expr: Box::new(expr),
-                })
-            },
-            Type::Identifier => Expr::VarRead(VarReadExpr{
-                name : self.previous().lexeme.to_string() }),
+                    self.errors.push(e.clone());
+                    return Err(e);
+                };
+                Ok(Expr::Grouping(GroupingExpr {
+                    expr: Box::new(expr?),
+                }))
+            }
+            Type::Identifier => Ok(Expr::VarRead(VarReadExpr {
+                name: self.previous().lexeme.to_string(),
+            })),
 
             _ => {
                 // cant parse sucessuflly
@@ -329,7 +334,12 @@ impl<'a> Parser<'a> {
                         + "> ! parser.primary() failed.",
                     self.peek().line,
                 ));
-                Expr::ErrorExpr
+                return Err(Err::Parser(
+                    "Unexpected token <".to_string()
+                        + &self.previous().to_string()
+                        + "> ! parser.primary() failed.",
+                    self.peek().line,
+                ));
             }
         }
     }
@@ -341,7 +351,7 @@ impl<'a> Parser<'a> {
         // and then just return a Option<&Token>
         match self.check(typ) {
             true => Ok(self.advance()),
-            false => {Err(Err::Parser(msg.to_string(), self.peek().line))},
+            false => Err(Err::Parser(msg.to_string(), self.peek().line)),
         }
     }
 }
@@ -388,7 +398,7 @@ mod tests {
             right: Box::new(Expr::Literal(LiteralExpr::Boolean(false))),
         });
 
-        let expected = vec![Statement::ExprSt(expected)];
+        let expected = vec![Ok(Statement::ExprSt(expected))];
         assert_eq!(ast.root, expected);
         assert!(ast.errors.len() == 0);
     }
@@ -396,7 +406,7 @@ mod tests {
     #[test]
     fn integration_test_mult_before_add() {
         // AST: <1 + <2 * 3>>
-        let s = new_scanner("1+2*3");
+        let s = new_scanner("1+2*3;");
         let (tokens, lexer_errs) = s.results();
         assert!(lexer_errs.len() == 0);
         let ast = AST::new(tokens);
@@ -411,7 +421,7 @@ mod tests {
             })),
         });
 
-        let expected = vec![Statement::ExprSt(expected)];
+        let expected = vec![Ok(Statement::ExprSt(expected))];
         assert_eq!(ast.root, expected);
         assert!(ast.errors.len() == 0);
     }
@@ -419,7 +429,7 @@ mod tests {
     #[test]
     fn integration_test_parenthesis() {
         // AST: <(<1 + 2>) * 3>
-        let s = new_scanner("(1-2)/3");
+        let s = new_scanner("(1-2)/3;");
         let (tokens, lexer_errs) = s.results();
         assert!(lexer_errs.len() == 0);
         let ast = AST::new(tokens);
@@ -436,9 +446,8 @@ mod tests {
             right: Box::new(Expr::Literal(LiteralExpr::Number(3.0))),
         });
 
-        let expected = vec![Statement::ExprSt(expected)];
+        let expected = vec![Ok(Statement::ExprSt(expected))];
         assert_eq!(ast.root, expected);
         assert!(ast.errors.len() == 0);
     }
 }
-

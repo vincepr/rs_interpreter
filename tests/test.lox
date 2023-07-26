@@ -1,4 +1,0 @@
-// using this file while developing *make run* - automatically runs this file
-
-var x;
-print "x = " + x;

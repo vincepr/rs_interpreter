@@ -5,10 +5,10 @@ use std::fmt;
 */
 
 // Possible Errors get defined by this
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Err {
     // WhatFailed (Error-message, line-of-error)
-    //      TODO: could change to point to character/byte of error
+    //      NOTE: could change to point to character/byte of error (infer line -> less space)
     //      -> re-evaluate to line && character in line
     Parser(String, usize),
     Lexer(String, usize),
@@ -23,15 +23,15 @@ impl std::fmt::Display for Err {
             Err::Parser(message, line) => {
                 f.write_fmt(format_args!("ParserERROR in line: {line} : {message}!"))
             }
-            Err::Interpreter(message, line) => {
-                f.write_fmt(format_args!("Interpreter-ERROR in line: {line} : {message}!"))
-            }
+            Err::Interpreter(message, line) => f.write_fmt(format_args!(
+                "Interpreter-ERROR in line: {line} : {message}!"
+            )),
         }
     }
 }
 
 // The Tokens that get created at the lexer then passed over to the parser
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token<'a> {
     pub typ: TokenType,
     pub lexeme: &'a str,

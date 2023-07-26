@@ -4,7 +4,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() == 1 {
         // running as "sanbox-mode"
-        rs_interpreter::run_prompt();   // this always runs in debug mode
+        rs_interpreter::run_prompt(); // this always runs in debug mode
     } else if args.len() == 2 {
         // running a file from path
         if let Some(source_code) = open_file(&args[1]) {

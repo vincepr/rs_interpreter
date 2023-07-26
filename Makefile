@@ -3,7 +3,7 @@ build:
 	cargo build --release
 
 run: 
-	cargo run ./tests/test.lox
+	cargo run ./test.lox
 
 test: build
 	cargo test
