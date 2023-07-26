@@ -13,7 +13,7 @@ use std::rc::Rc;
 use crate::{
     environment::Environment,
     expressions::{Expr, LiteralExpr},
-    interpreter::{execute_block, is_equal},
+    interpreter::execute_block,
     types::Err,
 };
 
