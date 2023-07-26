@@ -172,10 +172,65 @@ impl<'a> Parser<'a> {
         let condition = self.expression()?;
         self.consume(Type::CloseParen, "Expect ')' after while-condition.")?;
         let body = self.statement()?;
-        return Ok(Statement::While { condition: condition, body: Box::new(body) })
+        return Ok(Statement::While {
+            condition: condition,
+            body: Box::new(body),
+        });
+    }
+
+    fn for_statement(&mut self) -> Result<Statement, Err> {
+        // for(initializer; condition; increment){body}     'for(var i=0; i<10; i++){print i;}'
+        self.consume(Type::OpenParen, "Expect '(' after 'for'.")?;
+        // the optional initializer: ex 'var i=0;'
+        let initializer: Option<Statement>;
+        if self.expect(vec![Type::Semicolon]) {
+            initializer = None;
+        } else if self.expect(vec![Type::Var]) {
+            initializer = Some(self.var_declaration()?);
+        } else {
+            initializer = Some(self.expression_statement()?);
+        }
+        // the optional condition ex 'x<10'
+        let mut condition = if !self.check(Type::Semicolon) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+        self.consume(Type::Semicolon, "Expect ';' after for-loop condition.")?;
+        // the optional increment: 'i=i+1'
+        let increment = if !self.check(Type::CloseParen) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+        self.consume(Type::CloseParen, "Expect ')' after for-loop clauses.")?;
+        // the body enclosed in {...}
+        let mut body = self.statement();
+
+        // desugaring = rebuilding our for loop with existing while loop and var, assign, block etc:
+        if let Some(increment) = increment {
+            let artificial_body: Vec<Result<Statement, Err>> =
+                vec![body, Ok(Statement::ExprSt(increment))];
+            body = Ok(Statement::BlockSt(artificial_body));
+        }
+        if condition == None {
+            condition = Some(Expr::Literal(LiteralExpr::Boolean(true)));
+        }
+        // save to unwrap here since we know we guarded against it (we know they exist)
+        body = Ok(Statement::While {
+            condition: condition.unwrap(),
+            body: Box::new(body.unwrap()),
+        });
+        if let Some(initializer) = initializer {
+            body = Ok(Statement::BlockSt(vec![Ok(initializer), body]));
+        }
+        return body;
     }
 
     fn statement(&mut self) -> Result<Statement, Err> {
+        if self.expect(vec![Type::For]) {
+            return self.for_statement();
+        }
         if self.expect(vec![Type::If]) {
             return self.if_statement();
         }
