@@ -151,17 +151,27 @@ impl Evaluates for BinaryExpr {
 impl Evaluates for LogicalExpr {
     fn evaluated(&self, env: Rc<Environment>) -> Result<Expr, Err> {
         let left = self.left.evaluated(env.clone())?;
+        
         if self.token == TokenType::Or {
             if is_truthy(left.clone()) {
-                return Ok(left);
+                return Ok(Expr::Literal(LiteralExpr::Boolean(true)));
             }
-        } else {
-            // implicit And:
+        } else { // implicit TokenType::And
             if !is_truthy(left.clone()) {
-                return Ok(left);
+                return Ok(Expr::Literal(LiteralExpr::Boolean(false)));
             }
         }
-        return self.right.evaluated(env); // not evaluated if not reached! (ex no side-effects)
+        // we just want to return a Bool so we have to check truthiness of right side:
+        let right = self.right.evaluated(env)?; // not evaluated if not reached! (ex no side-effects)
+
+        match (self.token.clone(), is_truthy(right.clone()) ){
+            // a or b = false, true -> true
+            (TokenType::Or , true)=> Ok(Expr::Literal(LiteralExpr::Boolean(true))),
+            // a and b = true , true -> true
+            (TokenType::And, true) => Ok(Expr::Literal(LiteralExpr::Boolean(true))),
+            _ => Ok(Expr::Literal(LiteralExpr::Boolean(false))),
+        }
+
     }
 }
 
