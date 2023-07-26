@@ -31,7 +31,7 @@ impl std::fmt::Display for Err {
 }
 
 // The Tokens that get created at the lexer then passed over to the parser
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Token<'a> {
     pub typ: TokenType,
     pub lexeme: &'a str,

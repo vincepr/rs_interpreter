@@ -1,8 +1,7 @@
 // using this file while developing *make run* - automatically runs this file
 var x;
-x = 123 + "asd";
+x = 123 ;
 print x;
-
 
 var a = "global a";
 var b = "global b";

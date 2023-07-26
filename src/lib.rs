@@ -44,11 +44,11 @@ fn run(input: String, print_ast: bool) {
         println!("AST: {}", ast.print());
     }
     let expr = ast.root;
-    interpreter::interpret(expr);
-
+    
     // join errors together and print them out:
     errors.extend(ast.errors);
     for er in errors {
         println!("{}", er.to_string());
     }
+    interpreter::interpret(expr);
 }
