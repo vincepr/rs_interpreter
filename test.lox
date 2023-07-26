@@ -1,6 +1,6 @@
 // using this file while developing *make run* - automatically runs this file
-
-x = 123;
+var x;
+x = 123 + "asd";
 print x;
 
 

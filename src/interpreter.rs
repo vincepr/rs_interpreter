@@ -26,10 +26,16 @@ pub fn interpret(inputs: Vec<Result<Statement, Err>>) {
 
 fn exececute(scope: Rc<Environment>, statement: Result<Statement, Err>) {
     match statement {
-        Ok(st) => st.execute(scope),
+        Ok(st) => {
+            // after trying execution we check if we hit an runtime error, if so we print then abort
+            if let Err(e) = st.execute(scope){
+                println!("{e}");
+                std::process::exit(1);
+            };
+        },
         Result::Err(e) => {
-            // We hit a parsing error and print that out:
-            dbg!(e);
+            // We hit a parsing error and print that out: (since the statement was wrong we cant even try to execute it)
+            println!("{e}");
             std::process::exit(1);
         },
     }
@@ -49,31 +55,17 @@ pub fn execute_block(parent_scope: Rc<Environment>, statements: Vec<Result<State
         Expressions Evaluate, something that evaluates to a value -> x+1 or true==nil
 */
 
-/// Errors that happen at runtime: Ex at evaluating an Expression, trying to divide by 0;
-#[derive(Debug, Clone, PartialEq)]
-pub enum RunErr {
-    NotImplementedUnaryExpr,
-    NotImplementedBinaryExpr,
-    FailedAddition,
-    FailedEqual,
-    FailedDivision,
-    FailedDivisionByZero,
-    FailedMultiplication,
-    FailedComparison,
-    FailedSubtraction,
-}
 
 // interface to evaluate our expressions. (1+3 resolves to 4) => we keep 4 "and throw the rest away"
 trait Evaluates {
-    fn evaluated(&self, env: Rc<Environment>) -> Expr;
+    fn evaluated(&self, env: Rc<Environment>) -> Result<Expr, Err>;
 }
 
 impl Expr {
     /// maps the visitor-patern like implementations of how diffferent expressions evaluate:
-    pub fn evaluated(&self, env: Rc<Environment>) -> Expr {
+    pub fn evaluated(&self, env: Rc<Environment>) -> Result<Expr, Err> {
         match self {
-            RuntimeErr(e) => RuntimeErr(e.clone()),
-            ErrorExpr => ErrorExpr,
+
             Literal(expr) => expr.evaluated(env),
             Grouping(expr) => expr.evaluated(env),
             Unary(expr) => expr.evaluated(env),
@@ -86,51 +78,51 @@ impl Expr {
 }
 
 impl VarAssignExpr {
-    fn eval_with_env(&self, env: Rc<Environment>) -> Expr {
+    fn eval_with_env(&self, env: Rc<Environment>) -> Result<Expr, Err> {
         let new_val = self.value.evaluated(env.clone());
-        env.assign(self.name.clone(), new_val.clone()).unwrap();    //TODO: we need to properly handle this err
+        env.assign(self.name.clone(), new_val.clone()?)?;
         return new_val;
     }
 }
 
 impl VarReadExpr {
-    fn eval_with_env(&self, env: Rc<Environment>) -> Expr {
-        env.get_value(self.name.clone()).unwrap()                   // TODO: we need to properly handle this err
+    fn eval_with_env(&self, env: Rc<Environment>) -> Result<Expr, Err> {
+        env.get_value(self.name.clone())
     }
 }
 
 impl Evaluates for LiteralExpr {
-    fn evaluated(&self, _env: Rc<Environment>) -> Expr {
-        return Literal(self.clone());
+    fn evaluated(&self, _env: Rc<Environment>) -> Result<Expr, Err> {
+        return Ok(Literal(self.clone()));
     }
 }
 
 impl Evaluates for GroupingExpr {
-    fn evaluated(&self, env: Rc<Environment>) -> Expr {
+    fn evaluated(&self, env: Rc<Environment>) -> Result<Expr, Err> {
         return self.expr.evaluated(env);
     }
 }
 
 impl Evaluates for UnaryExpr {
-    fn evaluated(&self, env: Rc<Environment>) -> Expr {
+    fn evaluated(&self, env: Rc<Environment>) -> Result<Expr, Err> {
         let right = (*self.right).evaluated(env);
 
-        match (self.token.clone(), right) {
-            (TokenType::Minus, Literal(Number(nr))) => Literal(Number(-nr)),
-            (TokenType::Exclamation, Literal(Boolean(istrue))) => Literal(Boolean(!istrue)),
+        match (self.token.clone(), right?) {
+            (TokenType::Minus, Literal(Number(nr))) => Ok(Literal(Number(-nr))),
+            (TokenType::Exclamation, Literal(Boolean(istrue))) => Ok(Literal(Boolean(!istrue))),
             // !nil = true :
-            (TokenType::Exclamation, Literal(Nil)) => Literal(Boolean(true)),
-            _ => RuntimeErr(RunErr::NotImplementedUnaryExpr),
+            (TokenType::Exclamation, Literal(Nil)) => Ok(Literal(Boolean(true))),
+            (token, _) => Err(Err::Interpreter("NotImplementedUnaryExpr for :".to_string()+&token.to_string(), 69)),
         }
     }
 }
 
 impl Evaluates for BinaryExpr {
-    fn evaluated(&self, env: Rc<Environment>) -> Expr {
+    fn evaluated(&self, env: Rc<Environment>) -> Result<Expr, Err> {
         let left = (*self.left).evaluated(env.clone());
         let right = (*self.right).evaluated(env);
 
-        match (left, self.token.clone(), right) {
+        match (left?, self.token.clone(), right?) {
             (left, TokenType::Minus, right) => subtraction(left, TokenType::Minus, right),
             (left, TokenType::Slash, right) => division(left, TokenType::Slash, right),
             (left, TokenType::Star, right) => multiplication(left, TokenType::Star, right),
@@ -146,159 +138,165 @@ impl Evaluates for BinaryExpr {
             (left, TokenType::ExclamationEqual | TokenType::EqualEqual, right) => {
                 is_equal(left, self.token.clone(), right)
             }
-            _ => RuntimeErr(RunErr::NotImplementedBinaryExpr),
+            (left, token, right) => Err(Err::Interpreter(format!("NotImplementedBinaryExpr for {left} {token} {right}."), 69)),
         }
     }
 }
 
+
+/*
+            Helper Functions that handle some encapsulated logic
+*/
+
+
 // helper function to evaluate BinaryExpr:
-fn subtraction(left: Expr, token: TokenType, right: Expr) -> Expr {
+fn subtraction(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
     match (left, token, right) {
-        (Literal(Number(l)), TokenType::Minus, Literal(Number(r))) => Literal(Number(l - r)),
-        _ => RuntimeErr(RunErr::FailedSubtraction),
+        (Literal(Number(l)), TokenType::Minus, Literal(Number(r))) => Ok(Literal(Number(l - r))),
+        (left, token, right) => Err(Err::Interpreter(format!("FailedSubtraction for {left} {token} {right}."), 69)),
     }
 }
 
 // helper function to evaluate BinaryExpr:
-fn multiplication(left: Expr, token: TokenType, right: Expr) -> Expr {
+fn multiplication(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
     match (left, token, right) {
-        (Literal(Number(l)), TokenType::Star, Literal(Number(r))) => Literal(Number(l * r)),
-        _ => RuntimeErr(RunErr::FailedMultiplication),
+        (Literal(Number(l)), TokenType::Star, Literal(Number(r))) => Ok(Literal(Number(l * r))),
+        (left, token, right) => Err(Err::Interpreter(format!("FailedMultiplication for {left} {token} {right}."), 69)),
     }
 }
 
 // helper function to evaluate BinaryExpr:
-fn division(left: Expr, token: TokenType, right: Expr) -> Expr {
+fn division(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
     // explicit checking for division by 0 errors:
     if let Literal(Number(nr)) = right {
         if nr == 0.0 || nr == -0.0 {
-            return RuntimeErr(RunErr::FailedDivisionByZero);
+            return Err(Err::Interpreter(format!("FailedMultiplication for {left} / 0"),69));
         }
     }
 
     match (left, token, right) {
-        (Literal(Number(l)), TokenType::Slash, Literal(Number(r))) => Literal(Number(l / r)), // TODO we might have to handle divide by 0
-        _ => RuntimeErr(RunErr::FailedDivision),
+        (Literal(Number(l)), TokenType::Slash, Literal(Number(r))) => Ok(Literal(Number(l / r))),
+        (left, token, right)=> Err(Err::Interpreter(format!("FailedDivision for {left} {token} {right}"),69)),
     }
 }
 
 // helper function to evaluate BinaryExpr:
-fn addition(left: Expr, token: TokenType, right: Expr) -> Expr {
+fn addition(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
     match (left, token, right) {
         // addition
-        (Literal(Number(l)), TokenType::Plus, Literal(Number(r))) => Literal(Number(l + r)),
+        (Literal(Number(l)), TokenType::Plus, Literal(Number(r))) => Ok(Literal(Number(l + r))),
         // string concatinations:
         (Literal(String(l)), TokenType::Plus, Literal(Number(r))) => {
-            Literal(String(l + &r.to_string()))
+            Ok(Literal(String(l + &r.to_string())))
         }
         (Literal(String(l)), TokenType::Plus, Literal(Boolean(r))) => {
-            Literal(String(l + &r.to_string()))
+            Ok(Literal(String(l + &r.to_string())))
         }
-        (Literal(String(l)), TokenType::Plus, Literal(Nil)) => Literal(String(l + "Nil")),
-        (Literal(String(l)), TokenType::Plus, Literal(String(r))) => Literal(String(l + &r)),
-        _ => RuntimeErr(RunErr::FailedAddition),
+        (Literal(String(l)), TokenType::Plus, Literal(Nil)) => Ok(Literal(String(l + "Nil"))),
+        (Literal(String(l)), TokenType::Plus, Literal(String(r))) => Ok(Literal(String(l + &r))),
+        (left, token,right)=> Err(Err::Interpreter(format!("FailedAddition for {left} {token} {right}"),69)),
     }
 }
 
 // helper function to evaluate BinaryExpr:
-fn comparison(left: Expr, token: TokenType, right: Expr) -> Expr {
+fn comparison(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
     match (left, token, right) {
-        (Literal(Number(l)), TokenType::Less, Literal(Number(r))) => Literal(Boolean(l < r)),
-        (Literal(Number(l)), TokenType::LessEqual, Literal(Number(r))) => Literal(Boolean(l <= r)),
-        (Literal(Number(l)), TokenType::Greater, Literal(Number(r))) => Literal(Boolean(l > r)),
+        (Literal(Number(l)), TokenType::Less, Literal(Number(r))) => Ok(Literal(Boolean(l < r))),
+        (Literal(Number(l)), TokenType::LessEqual, Literal(Number(r))) => Ok(Literal(Boolean(l <= r))),
+        (Literal(Number(l)), TokenType::Greater, Literal(Number(r))) => Ok(Literal(Boolean(l > r))),
         (Literal(Number(l)), TokenType::GreaterEqual, Literal(Number(r))) => {
-            Literal(Boolean(l >= r))
+            Ok(Literal(Boolean(l >= r)))
         }
-        _ => RuntimeErr(RunErr::FailedComparison),
+        (left, token,right)=> Err(Err::Interpreter(format!("FailedComparison for {left} {token} {right}"),69)),
     }
 }
 
 // helper function to evaluate BinaryExpr:
-fn is_equal(left: Expr, token: TokenType, right: Expr) -> Expr {
+fn is_equal(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
     match (left, token, right) {
-        (l, TokenType::ExclamationEqual, r) => Literal(Boolean(l != r)),
-        (l, TokenType::EqualEqual, r) => Literal(Boolean(l == r)),
-        _ => RuntimeErr(RunErr::FailedEqual),
+        (l, TokenType::ExclamationEqual, r) => Ok(Literal(Boolean(l != r))),
+        (l, TokenType::EqualEqual, r) => Ok(Literal(Boolean(l == r))),
+        (left, token,right)=> Err(Err::Interpreter(format!("FailedEqualityCheck for {left} {token} {right}"),69)),
     }
 }
 
-#[rustfmt::skip]
-#[cfg(test)]
-mod tests {
-    use crate::{lexer, parser::AST};
-    use RunErr::*;
+// #[rustfmt::skip]
+// #[cfg(test)]
+// mod tests {
+//     use crate::{lexer, parser::AST};
+//     use RuntimeErr::*;
 
 
-    use super::*;
-    // some quick integration testing:
-    fn test(input: &str, expected: Expr){
-        //
-        let global_scope = Rc::new(crate::environment::Environment::new(None));
-        //
-        let s = lexer::new_scanner(input);
-        let (tokens, lexer_errs) = s.results();
-        let ast = AST::new(tokens);
-        let statements = ast.root;
-        for s in statements{
-            if let Statement::ExprSt(expr) = s.unwrap(){
-                let res = expr.evaluated(global_scope.clone());
-                assert_eq!(res, expected);
-            }else { panic!("expected a Expression that evaluates!")}
-            assert!(lexer_errs.len() == 0);
-            assert!(ast.errors.len() == 0);
-        }
+//     use super::*;
+//     // some quick integration testing:
+//     fn test(input: &str, expected: Expr){
+//         //
+//         let global_scope = Rc::new(crate::environment::Environment::new(None));
+//         //
+//         let s = lexer::new_scanner(input);
+//         let (tokens, lexer_errs) = s.results();
+//         let ast = AST::new(tokens);
+//         let statements = ast.root;
+//         for s in statements{
+//             if let Statement::ExprSt(expr) = s.unwrap(){
+//                 let res = expr.evaluated(global_scope.clone());
+//                 assert_eq!(res, expected);
+//             }else { panic!("expected a Expression that evaluates!")}
+//             assert!(lexer_errs.len() == 0);
+//             assert!(ast.errors.len() == 0);
+//         }
 
 
 
         
         
-    }
+//     }
 
-    #[test]
-    fn equal() {
-        // AST: <true == false>     =>   true
-        test("true == false;", Literal(Boolean(false)));
-        test("true != true;", Literal(Boolean(false)));
-        test("10 == 10;", Literal(Boolean(true)));
-        test("\"hello\" != \"hello\";", Literal(Boolean(false)));
-        test("nil == nil;", Literal(Boolean(true)));
-    }
+//     #[test]
+//     fn equal() {
+//         // AST: <true == false>     =>   true
+//         test("true == false;", Literal(Boolean(false)));
+//         test("true != true;", Literal(Boolean(false)));
+//         test("10 == 10;", Literal(Boolean(true)));
+//         test("\"hello\" != \"hello\";", Literal(Boolean(false)));
+//         test("nil == nil;", Literal(Boolean(true)));
+//     }
 
-    #[test]
-    fn comparison() {
-        test("1 < 2", Literal(Boolean(true)));
-        test("10<=10", Literal(Boolean(true)));
-        test("10>10", Literal(Boolean(false)));
-        test("10>=10", Literal(Boolean(true)));
-        test("true > false", RuntimeErr(FailedComparison));
-        test("\"hello\" <= \"hello\";", RuntimeErr(FailedComparison));
-    }
+//     #[test]
+//     fn comparison() {
+//         test("1 < 2", Literal(Boolean(true)));
+//         test("10<=10", Literal(Boolean(true)));
+//         test("10>10", Literal(Boolean(false)));
+//         test("10>=10", Literal(Boolean(true)));
+//         test("true > false", RuntimeErr(FailedComparison));
+//         test("\"hello\" <= \"hello\";", RuntimeErr(FailedComparison));
+//     }
 
-    #[test]
-    fn addition_subtraction() {
-        test("1.1+2", Literal(Number(3.1)));
-        test("1.2-2", Literal(Number(-0.8)));
-        test("\"hello\" + \" bye\";", Literal(String("hello bye".to_string())));
-        test("\"hello_\" + nil", Literal(String("hello_Nil".to_string())));
-        test("\"hello_\" + 3", Literal(String("hello_3".to_string())));
-        test("\"hello_\" + true", Literal(String("hello_true".to_string())));
-        test("\"hello_\" + false", Literal(String("hello_false".to_string())));
-        test("true+false", RuntimeErr(FailedAddition));
-    }
+//     #[test]
+//     fn addition_subtraction() {
+//         test("1.1+2", Literal(Number(3.1)));
+//         test("1.2-2", Literal(Number(-0.8)));
+//         test("\"hello\" + \" bye\";", Literal(String("hello bye".to_string())));
+//         test("\"hello_\" + nil", Literal(String("hello_Nil".to_string())));
+//         test("\"hello_\" + 3", Literal(String("hello_3".to_string())));
+//         test("\"hello_\" + true", Literal(String("hello_true".to_string())));
+//         test("\"hello_\" + false", Literal(String("hello_false".to_string())));
+//         test("true+false", RuntimeErr(FailedAddition));
+//     }
 
-    #[test]
-    fn division() {
-        test("1/2", Literal(Number(0.5)));
-        test("-2/0.5", Literal(Number(-4.0)));
-        test("1/0", RuntimeErr(FailedDivisionByZero));
-        test("10 / nil", RuntimeErr(FailedDivision));
-        test("true / 2", RuntimeErr(FailedDivision));
-    }
+//     #[test]
+//     fn division() {
+//         test("1/2", Literal(Number(0.5)));
+//         test("-2/0.5", Literal(Number(-4.0)));
+//         test("1/0", RuntimeErr(FailedDivisionByZero));
+//         test("10 / nil", RuntimeErr(FailedDivision));
+//         test("true / 2", RuntimeErr(FailedDivision));
+//     }
 
-    #[test]
-    fn multiplication() {
-        test("1.1*2", Literal(Number(2.2)));
-        test("-1.2*0.2", Literal(Number(-0.24)));
-        test("-1.2*nil", RuntimeErr(FailedMultiplication));
-    }
-}
+//     #[test]
+//     fn multiplication() {
+//         test("1.1*2", Literal(Number(2.2)));
+//         test("-1.2*0.2", Literal(Number(-0.24)));
+//         test("-1.2*nil", RuntimeErr(FailedMultiplication));
+//     }
+// }

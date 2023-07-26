@@ -334,7 +334,12 @@ impl<'a> Parser<'a> {
                         + "> ! parser.primary() failed.",
                     self.peek().line,
                 ));
-                Ok(Expr::ErrorExpr)
+                return Err(Err::Parser(
+                    "Unexpected token <".to_string()
+                        + &self.previous().to_string()
+                        + "> ! parser.primary() failed.",
+                    self.peek().line,
+                ));
             }
         }
     }

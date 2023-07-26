@@ -8,7 +8,7 @@ use std::fmt;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Err {
     // WhatFailed (Error-message, line-of-error)
-    //      TODO: could change to point to character/byte of error
+    //      NOTE: could change to point to character/byte of error (infer line -> less space)
     //      -> re-evaluate to line && character in line
     Parser(String, usize),
     Lexer(String, usize),
