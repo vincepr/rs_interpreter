@@ -7,11 +7,11 @@ use crate::{
         VarAssignExpr, VarReadExpr,
     },
     statements::Statement,
-    types::TokenType,
+    types::{TokenType, Err},
 };
 
 /// Takes the root of the AST and evaluates it down to a result.
-pub fn interpret(inputs: Vec<Statement>) {
+pub fn interpret(inputs: Vec<Result<Statement, Err>>) {
     // envirnoment that holds reference to all variable-names-> values mapped:
     let global_scope = Rc::new(Environment::new(None));
 
@@ -24,13 +24,19 @@ pub fn interpret(inputs: Vec<Statement>) {
         Statements Execute, always end with a ;
 */
 
-fn exececute(scope: Rc<Environment>, statement: Statement) {
-    // TODO: Here should be a good place to check for errors? check if we get an error then print that out or smth
-    statement.execute(scope);
+fn exececute(scope: Rc<Environment>, statement: Result<Statement, Err>) {
+    match statement {
+        Ok(st) => st.execute(scope),
+        Result::Err(e) => {
+            // We hit a parsing error and print that out:
+            dbg!(e);
+            std::process::exit(1);
+        },
+    }
 }
 
 /// gets called from Statements-'visitorpattern'
-pub fn execute_block(parent_scope: Rc<Environment>, statements: Vec<Statement>) {
+pub fn execute_block(parent_scope: Rc<Environment>, statements: Vec<Result<Statement, Err>>) {
     // create the new Scope:
     let local_scope = Rc::new(Environment::new(Some(parent_scope)));
 
@@ -64,7 +70,7 @@ trait Evaluates {
 
 impl Expr {
     /// maps the visitor-patern like implementations of how diffferent expressions evaluate:
-    pub fn evaluated(&self, env: Rc<Environment>) -> Self {
+    pub fn evaluated(&self, env: Rc<Environment>) -> Expr {
         match self {
             RuntimeErr(e) => RuntimeErr(e.clone()),
             ErrorExpr => ErrorExpr,
@@ -82,14 +88,14 @@ impl Expr {
 impl VarAssignExpr {
     fn eval_with_env(&self, env: Rc<Environment>) -> Expr {
         let new_val = self.value.evaluated(env.clone());
-        env.assign(self.name.clone(), new_val.clone());
+        env.assign(self.name.clone(), new_val.clone()).unwrap();    //TODO: we need to properly handle this err
         return new_val;
     }
 }
 
 impl VarReadExpr {
     fn eval_with_env(&self, env: Rc<Environment>) -> Expr {
-        env.get_value(self.name.clone()).unwrap() // TODO: we need to properly handle this err
+        env.get_value(self.name.clone()).unwrap()                   // TODO: we need to properly handle this err
     }
 }
 
@@ -234,7 +240,7 @@ mod tests {
         let ast = AST::new(tokens);
         let statements = ast.root;
         for s in statements{
-            if let Statement::ExprSt(expr) = s{
+            if let Statement::ExprSt(expr) = s.unwrap(){
                 let res = expr.evaluated(global_scope.clone());
                 assert_eq!(res, expected);
             }else { panic!("expected a Expression that evaluates!")}

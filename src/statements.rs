@@ -10,15 +10,15 @@
 
 use std::rc::Rc;
 
-use crate::{environment::Environment, expressions::Expr};
+use crate::{types::Err, environment::Environment, expressions::Expr};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     ExprSt(Expr),
     PrintSt(Expr),
     VariableSt(String, Expr),
-    BlockSt(Vec<Statement>),
-    ErrStatementVariable,
+    BlockSt(Vec<Result<Statement, Err>>),
+    //ErrStatementVariable,
 }
 
 impl Statement {
@@ -30,7 +30,7 @@ impl Statement {
             Statement::VariableSt(name, initial_value) => {
                 eval_var_statement(name, initial_value, current_env)
             }
-            Statement::ErrStatementVariable => panic!("Hit Error Statement Variable"),
+            //Statement::ErrStatementVariable => panic!("Hit Error Statement Variable"),
             Statement::BlockSt(statements) => {
                 eval_block_statement(statements, current_env);
             }
@@ -49,7 +49,7 @@ fn eval_var_statement(name: String, initial_value: Expr, environment: Rc<Environ
     let value = initial_value.evaluated(environment.clone());
     environment.define(name, value);
 }
-fn eval_block_statement(statements: Vec<Statement>, env: Rc<Environment>) {
+fn eval_block_statement(statements: Vec<Result<Statement, Err>>, env: Rc<Environment>) {
     crate::interpreter::execute_block(env, statements);
 }
 // fn eval_assign_statement(name: String, new_value: Expr ,  env: &mut Environment) {

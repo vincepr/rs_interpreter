@@ -5,7 +5,7 @@ use std::fmt;
 */
 
 // Possible Errors get defined by this
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Err {
     // WhatFailed (Error-message, line-of-error)
     //      TODO: could change to point to character/byte of error
