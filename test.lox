@@ -1,4 +1,4 @@
 // using this file while developing *make run* - automatically runs this file
-var x = nil;
+var x = "test";
 //x = x == nil;
-print x == nil;
+print x == "test";

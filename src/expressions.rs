@@ -11,6 +11,7 @@ pub enum Expr {
     Grouping(GroupingExpr),
     VarRead(VarReadExpr),
     VarAssign(VarAssignExpr),
+    Logical(LogicalExpr),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -35,6 +36,15 @@ pub struct GroupingExpr {
 #[derive(Debug, Clone, PartialEq)]
 pub struct VarReadExpr {
     pub name: String,
+}
+
+/// 'or' expression -> this shortcircuits (function calls have no side-effects)
+/// so we handle them separate
+#[derive(Debug, Clone, PartialEq)]
+pub struct LogicalExpr {
+    pub left: Box<Expr>,
+    pub token: TokenType,
+    pub right: Box<Expr>,
 }
 
 /// writes to a local or global variable. 'x = 123;'
@@ -75,6 +85,9 @@ impl std::fmt::Display for Expr {
             }
             Expr::Unary(UnaryExpr { token, right }) => {
                 f.write_fmt(format_args!("<{token} {right}>"))
+            }
+            Expr::Logical(LogicalExpr { left, token, right }) => {
+                f.write_fmt(format_args!("<{left} {token} {right}>"))
             }
             Expr::Grouping(GroupingExpr { expr }) => f.write_fmt(format_args!("({expr})")),
             Expr::VarRead(VarReadExpr { name }) => name.fmt(f),

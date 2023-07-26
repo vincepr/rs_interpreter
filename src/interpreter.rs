@@ -3,8 +3,8 @@ use std::rc::Rc;
 use crate::{
     environment::Environment,
     expressions::{
-        BinaryExpr, Expr, Expr::*, GroupingExpr, LiteralExpr, LiteralExpr::*, UnaryExpr,
-        VarAssignExpr, VarReadExpr,
+        BinaryExpr, Expr, Expr::*, GroupingExpr, LiteralExpr, LiteralExpr::*, LogicalExpr,
+        UnaryExpr, VarAssignExpr, VarReadExpr,
     },
     statements::Statement,
     types::{Err, TokenType},
@@ -68,6 +68,7 @@ impl Expr {
             Grouping(expr) => expr.evaluated(env),
             Unary(expr) => expr.evaluated(env),
             Binary(expr) => expr.evaluated(env),
+            Logical(expr) => expr.evaluated(env),
 
             VarAssign(expr) => expr.eval_with_env(env),
             VarRead(expr) => expr.eval_with_env(env),
@@ -144,6 +145,23 @@ impl Evaluates for BinaryExpr {
                 69,
             )),
         }
+    }
+}
+
+impl Evaluates for LogicalExpr {
+    fn evaluated(&self, env: Rc<Environment>) -> Result<Expr, Err> {
+        let left = self.left.evaluated(env.clone())?;
+        if self.token == TokenType::Or {
+            if is_truthy(left.clone()) {
+                return Ok(left);
+            }
+        } else {
+            // implicit And:
+            if !is_truthy(left.clone()) {
+                return Ok(left);
+            }
+        }
+        return self.right.evaluated(env); // not evaluated if not reached! (ex no side-effects)
     }
 }
 
@@ -234,7 +252,7 @@ fn comparison(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
 }
 
 // helper function to evaluate BinaryExpr:
-pub fn is_equal(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
+fn is_equal(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
     match (left, token, right) {
         (l, TokenType::ExclamationEqual, r) => Ok(Literal(Boolean(l != r))),
         (l, TokenType::EqualEqual, r) => Ok(Literal(Boolean(l == r))),
@@ -242,6 +260,14 @@ pub fn is_equal(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> 
             format!("FailedEqualityCheck for {left} {token} {right}"),
             69,
         )),
+    }
+}
+
+// helper function to compare expression for truthiness: (ex: if "string" {...})
+pub fn is_truthy(expr: Expr) -> bool {
+    match expr {
+        Expr::Literal(LiteralExpr::Boolean(b)) => b,
+        _ => return false,
     }
 }
 

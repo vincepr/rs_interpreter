@@ -12,8 +12,8 @@ use std::rc::Rc;
 
 use crate::{
     environment::Environment,
-    expressions::{Expr, LiteralExpr},
-    interpreter::execute_block,
+    expressions::Expr,
+    interpreter::{execute_block, is_truthy},
     types::Err,
 };
 
@@ -92,14 +92,6 @@ fn execute_if_statement(
         else_branch.execute(env)?;
     }
     Ok(())
-}
-
-// helper function to compare expression for truthiness: (ex: if "string" {...})
-fn is_truthy(expr: Expr) -> bool {
-    match expr {
-        Expr::Literal(LiteralExpr::Boolean(b)) => b,
-        _ => return false,
-    }
 }
 
 // fn eval_assign_statement(name: String, new_value: Expr ,  env: &mut Environment) {

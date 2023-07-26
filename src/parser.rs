@@ -2,7 +2,8 @@ use std::mem;
 
 use crate::{
     expressions::{
-        BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr, VarAssignExpr, VarReadExpr,
+        BinaryExpr, Expr, GroupingExpr, LiteralExpr, LogicalExpr, UnaryExpr, VarAssignExpr,
+        VarReadExpr,
     },
     statements::Statement,
     types::{Err, Token, TokenType as Type},
@@ -246,7 +247,7 @@ impl<'a> Parser<'a> {
     }
 
     fn assignment(&mut self) -> Result<Expr, Err> {
-        let expr = self.equality();
+        let expr = self.logical_or();
         // we parse left side, if next is '=' then we know we are trying to assign:
         if self.expect(vec![Type::Equal]) {
             //let equals = self.previous();
@@ -256,6 +257,34 @@ impl<'a> Parser<'a> {
                 return Ok(Expr::VarAssign(VarAssignExpr::new(name, value?)));
             }
             return Err(self.error_expr("Invalid assignment target."));
+        }
+        return expr;
+    }
+
+    fn logical_or(&mut self) -> Result<Expr, Err> {
+        let mut expr = self.logical_and();
+        while self.expect(vec![Type::Or]) {
+            let token = self.previous().typ.clone();
+            let right = self.logical_and();
+            expr = Ok(Expr::Logical(LogicalExpr {
+                left: Box::new(expr?),
+                token: token,
+                right: Box::new(right?),
+            }))
+        }
+        return expr;
+    }
+
+    fn logical_and(&mut self) -> Result<Expr, Err> {
+        let mut expr = self.equality();
+        while self.expect(vec![Type::And]) {
+            let token = self.previous().typ.clone();
+            let right = self.equality();
+            expr = Ok(Expr::Logical(LogicalExpr {
+                left: Box::new(expr?),
+                token: token,
+                right: Box::new(right?),
+            }))
         }
         return expr;
     }
