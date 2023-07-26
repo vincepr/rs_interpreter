@@ -23,12 +23,15 @@ pub enum Statement {
     PrintSt(Expr),
     VariableSt(String, Expr),
     BlockSt(Vec<Result<Statement, Err>>),
-    /// If Statement: condition, thenBranch, elseBranch
     IfSt {
         condition: Expr,
         then_: Box<Statement>,
         else_: Option<Box<Statement>>,
     },
+    While{
+        condition: Expr,
+        body: Box<Statement>,
+    }
 }
 
 impl Statement {
@@ -46,8 +49,16 @@ impl Statement {
                 then_,
                 else_,
             } => execute_if_statement(condition, then_, else_, current_env),
+            Self::While { condition, body } => execute_while_statement(condition, *body, current_env),
         }
     }
+}
+
+fn execute_while_statement(condition: Expr, body: Statement, env: Rc<Environment>,) -> Result<(), Err> {
+    while is_truthy(condition.evaluated(env.clone())?) {
+        body.clone().execute(env.clone())?;
+    }
+    Ok(())
 }
 
 fn execute_expr_statement(expr: Expr, env: Rc<Environment>) -> Result<(), Err> {

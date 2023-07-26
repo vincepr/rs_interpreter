@@ -1,5 +1,6 @@
 // using this file while developing *make run* - automatically runs this file
-var x = "test";
-//x = x == nil;
-x = ("true" or true);
-print x;
+var x = 10;
+while (x> 5) {
+    x = x - 1;
+    print x;
+}

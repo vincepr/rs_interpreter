@@ -167,12 +167,23 @@ impl<'a> Parser<'a> {
         return Ok(Statement::VariableSt(name, initializer));
     }
 
+    fn while_statement(&mut self) -> Result<Statement, Err> {
+        self.consume(Type::OpenParen, "Expect '(' after 'while'.")?;
+        let condition = self.expression()?;
+        self.consume(Type::CloseParen, "Expect ')' after while-condition.")?;
+        let body = self.statement()?;
+        return Ok(Statement::While { condition: condition, body: Box::new(body) })
+    }
+
     fn statement(&mut self) -> Result<Statement, Err> {
         if self.expect(vec![Type::If]) {
             return self.if_statement();
         }
         if self.expect(vec![Type::Print]) {
             return self.print_statement();
+        }
+        if self.expect(vec![Type::While]) {
+            return self.while_statement();
         }
         if self.expect(vec![Type::OpenBrace]) {
             return Ok(Statement::BlockSt(self.block()));
