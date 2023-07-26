@@ -2,7 +2,8 @@ use std::mem;
 
 use crate::{
     expressions::{
-        BinaryExpr, Expr, GroupingExpr, LiteralExpr, UnaryExpr, VarAssignExpr, VarReadExpr,
+        BinaryExpr, Expr, GroupingExpr, LiteralExpr, LogicalExpr, UnaryExpr, VarAssignExpr,
+        VarReadExpr,
     },
     statements::Statement,
     types::{Err, Token, TokenType as Type},
@@ -166,14 +167,104 @@ impl<'a> Parser<'a> {
         return Ok(Statement::VariableSt(name, initializer));
     }
 
+    fn while_statement(&mut self) -> Result<Statement, Err> {
+        self.consume(Type::OpenParen, "Expect '(' after 'while'.")?;
+        let condition = self.expression()?;
+        self.consume(Type::CloseParen, "Expect ')' after while-condition.")?;
+        let body = self.statement()?;
+        return Ok(Statement::While {
+            condition: condition,
+            body: Box::new(body),
+        });
+    }
+
+    fn for_statement(&mut self) -> Result<Statement, Err> {
+        // for(initializer; condition; increment){body}     'for(var i=0; i<10; i++){print i;}'
+        self.consume(Type::OpenParen, "Expect '(' after 'for'.")?;
+        // the optional initializer: ex 'var i=0;'
+        let initializer: Option<Statement>;
+        if self.expect(vec![Type::Semicolon]) {
+            initializer = None;
+        } else if self.expect(vec![Type::Var]) {
+            initializer = Some(self.var_declaration()?);
+        } else {
+            initializer = Some(self.expression_statement()?);
+        }
+        // the optional condition ex 'x<10'
+        let mut condition = if !self.check(Type::Semicolon) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+        self.consume(Type::Semicolon, "Expect ';' after for-loop condition.")?;
+        // the optional increment: 'i=i+1'
+        let increment = if !self.check(Type::CloseParen) {
+            Some(self.expression()?)
+        } else {
+            None
+        };
+        self.consume(Type::CloseParen, "Expect ')' after for-loop clauses.")?;
+        // the body enclosed in {...}
+        let mut body = self.statement();
+
+        // desugaring = rebuilding our for loop with existing while loop and var, assign, block etc:
+        if let Some(increment) = increment {
+            let artificial_body: Vec<Result<Statement, Err>> =
+                vec![body, Ok(Statement::ExprSt(increment))];
+            body = Ok(Statement::BlockSt(artificial_body));
+        }
+        if condition == None {
+            condition = Some(Expr::Literal(LiteralExpr::Boolean(true)));
+        }
+        // save to unwrap here since we know we guarded against it (we know they exist)
+        body = Ok(Statement::While {
+            condition: condition.unwrap(),
+            body: Box::new(body.unwrap()),
+        });
+        if let Some(initializer) = initializer {
+            body = Ok(Statement::BlockSt(vec![Ok(initializer), body]));
+        }
+        return body;
+    }
+
     fn statement(&mut self) -> Result<Statement, Err> {
+        if self.expect(vec![Type::For]) {
+            return self.for_statement();
+        }
+        if self.expect(vec![Type::If]) {
+            return self.if_statement();
+        }
         if self.expect(vec![Type::Print]) {
             return self.print_statement();
+        }
+        if self.expect(vec![Type::While]) {
+            return self.while_statement();
         }
         if self.expect(vec![Type::OpenBrace]) {
             return Ok(Statement::BlockSt(self.block()));
         }
         return self.expression_statement();
+    }
+
+    fn if_statement(&mut self) -> Result<Statement, Err> {
+        _ = self.consume(Type::OpenParen, "Expect '(' after 'if'.")?;
+        let condition = self.expression()?;
+        _ = self.consume(Type::CloseParen, "Expect ')' after 'if' condition.")?;
+
+        let then_ = self.statement()?;
+        if self.expect(vec![Type::Else]) {
+            let else_ = Some(Box::new(self.statement()?));
+            return Ok(Statement::IfSt {
+                condition: condition,
+                then_: Box::new(then_),
+                else_: else_,
+            });
+        }
+        return Ok(Statement::IfSt {
+            condition: condition,
+            then_: Box::new(then_),
+            else_: None,
+        });
     }
 
     fn print_statement(&mut self) -> Result<Statement, Err> {
@@ -222,7 +313,7 @@ impl<'a> Parser<'a> {
     }
 
     fn assignment(&mut self) -> Result<Expr, Err> {
-        let expr = self.equality();
+        let expr = self.logical_or();
         // we parse left side, if next is '=' then we know we are trying to assign:
         if self.expect(vec![Type::Equal]) {
             //let equals = self.previous();
@@ -232,6 +323,34 @@ impl<'a> Parser<'a> {
                 return Ok(Expr::VarAssign(VarAssignExpr::new(name, value?)));
             }
             return Err(self.error_expr("Invalid assignment target."));
+        }
+        return expr;
+    }
+
+    fn logical_or(&mut self) -> Result<Expr, Err> {
+        let mut expr = self.logical_and();
+        while self.expect(vec![Type::Or]) {
+            let token = self.previous().typ.clone();
+            let right = self.logical_and();
+            expr = Ok(Expr::Logical(LogicalExpr {
+                left: Box::new(expr?),
+                token: token,
+                right: Box::new(right?),
+            }))
+        }
+        return expr;
+    }
+
+    fn logical_and(&mut self) -> Result<Expr, Err> {
+        let mut expr = self.equality();
+        while self.expect(vec![Type::And]) {
+            let token = self.previous().typ.clone();
+            let right = self.equality();
+            expr = Ok(Expr::Logical(LogicalExpr {
+                left: Box::new(expr?),
+                token: token,
+                right: Box::new(right?),
+            }))
         }
         return expr;
     }

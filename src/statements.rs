@@ -10,7 +10,12 @@
 
 use std::rc::Rc;
 
-use crate::{environment::Environment, expressions::Expr, types::Err};
+use crate::{
+    environment::Environment,
+    expressions::Expr,
+    interpreter::{execute_block, is_truthy},
+    types::Err,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
@@ -18,22 +23,48 @@ pub enum Statement {
     PrintSt(Expr),
     VariableSt(String, Expr),
     BlockSt(Vec<Result<Statement, Err>>),
-    //ErrStatementVariable,
+    IfSt {
+        condition: Expr,
+        then_: Box<Statement>,
+        else_: Option<Box<Statement>>,
+    },
+    While {
+        condition: Expr,
+        body: Box<Statement>,
+    },
 }
 
 impl Statement {
     /// visitor-like pattern that maps each Statment to its handler:
     pub fn execute(self, current_env: Rc<Environment>) -> Result<(), Err> {
         match self {
-            Statement::ExprSt(expr) => execute_expr_statement(expr, current_env),
-            Statement::PrintSt(expr) => execute_print_statement(expr, current_env),
-            Statement::VariableSt(name, initial_value) => {
+            Self::ExprSt(expr) => execute_expr_statement(expr, current_env),
+            Self::PrintSt(expr) => execute_print_statement(expr, current_env),
+            Self::VariableSt(name, initial_value) => {
                 execuate_var_statement(name, initial_value, current_env)
             }
-            //Statement::ErrStatementVariable => panic!("Hit Error Statement Variable"),
-            Statement::BlockSt(statements) => execute_block_statement(statements, current_env),
+            Self::BlockSt(statements) => execute_block_statement(statements, current_env),
+            Self::IfSt {
+                condition,
+                then_,
+                else_,
+            } => execute_if_statement(condition, then_, else_, current_env),
+            Self::While { condition, body } => {
+                execute_while_statement(condition, *body, current_env)
+            }
         }
     }
+}
+
+fn execute_while_statement(
+    condition: Expr,
+    body: Statement,
+    env: Rc<Environment>,
+) -> Result<(), Err> {
+    while is_truthy(condition.evaluated(env.clone())?) {
+        body.clone().execute(env.clone())?;
+    }
+    Ok(())
 }
 
 fn execute_expr_statement(expr: Expr, env: Rc<Environment>) -> Result<(), Err> {
@@ -62,7 +93,21 @@ fn execute_block_statement(
     statements: Vec<Result<Statement, Err>>,
     env: Rc<Environment>,
 ) -> Result<(), Err> {
-    crate::interpreter::execute_block(env, statements);
+    execute_block(env, statements);
+    Ok(())
+}
+
+fn execute_if_statement(
+    condition: Expr,
+    then_: Box<Statement>,
+    else_: Option<Box<Statement>>,
+    env: Rc<Environment>,
+) -> Result<(), Err> {
+    if is_truthy(condition.evaluated(env.clone())?) {
+        then_.execute(env)?;
+    } else if let Some(else_branch) = else_ {
+        else_branch.execute(env)?;
+    }
     Ok(())
 }
 
