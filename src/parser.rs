@@ -45,10 +45,10 @@ impl AST {
             match res {
                 Ok(statement) => {
                     let _ = write!(&mut str, "{}", statement);
-                },
+                }
                 Result::Err(e) => {
                     let _ = write!(&mut str, "{}", e);
-                },
+                }
             }
         }
         return str;

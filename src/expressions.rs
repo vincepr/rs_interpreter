@@ -1,4 +1,4 @@
-use crate::{types::TokenType};
+use crate::types::TokenType;
 
 // Collection of all Expressions. They are the building blocks of our AST
 // We expose those to our backend-interpreter AND middleend-parser
@@ -80,9 +80,8 @@ impl std::fmt::Display for Expr {
             Expr::VarRead(VarReadExpr { name }) => name.fmt(f),
             Expr::VarAssign(VarAssignExpr { name, value }) => {
                 f.write_fmt(format_args!("<{name} = {value}>"))
-            }
-            //Expr::RuntimeErr(e) => write!(f, "RuntimeErr({:?})", e),
-            //_ => write!(f, "{:?}", self),             //Failback to Debug-Printing for unimplemented expressions?
+            } //Expr::RuntimeErr(e) => write!(f, "RuntimeErr({:?})", e),
+              //_ => write!(f, "{:?}", self),             //Failback to Debug-Printing for unimplemented expressions?
         }
     }
 }

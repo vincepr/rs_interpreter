@@ -7,7 +7,7 @@ use crate::{
         VarAssignExpr, VarReadExpr,
     },
     statements::Statement,
-    types::{TokenType, Err},
+    types::{Err, TokenType},
 };
 
 /// Takes the root of the AST and evaluates it down to a result.
@@ -28,16 +28,16 @@ fn exececute(scope: Rc<Environment>, statement: Result<Statement, Err>) {
     match statement {
         Ok(st) => {
             // after trying execution we check if we hit an runtime error, if so we print then abort
-            if let Err(e) = st.execute(scope){
+            if let Err(e) = st.execute(scope) {
                 println!("{e}");
                 std::process::exit(1);
             };
-        },
+        }
         Result::Err(e) => {
             // We hit a parsing error and print that out: (since the statement was wrong we cant even try to execute it)
             println!("{e}");
             std::process::exit(1);
-        },
+        }
     }
 }
 
@@ -55,7 +55,6 @@ pub fn execute_block(parent_scope: Rc<Environment>, statements: Vec<Result<State
         Expressions Evaluate, something that evaluates to a value -> x+1 or true==nil
 */
 
-
 // interface to evaluate our expressions. (1+3 resolves to 4) => we keep 4 "and throw the rest away"
 trait Evaluates {
     fn evaluated(&self, env: Rc<Environment>) -> Result<Expr, Err>;
@@ -65,7 +64,6 @@ impl Expr {
     /// maps the visitor-patern like implementations of how diffferent expressions evaluate:
     pub fn evaluated(&self, env: Rc<Environment>) -> Result<Expr, Err> {
         match self {
-
             Literal(expr) => expr.evaluated(env),
             Grouping(expr) => expr.evaluated(env),
             Unary(expr) => expr.evaluated(env),
@@ -112,7 +110,10 @@ impl Evaluates for UnaryExpr {
             (TokenType::Exclamation, Literal(Boolean(istrue))) => Ok(Literal(Boolean(!istrue))),
             // !nil = true :
             (TokenType::Exclamation, Literal(Nil)) => Ok(Literal(Boolean(true))),
-            (token, _) => Err(Err::Interpreter("NotImplementedUnaryExpr for :".to_string()+&token.to_string(), 69)),
+            (token, _) => Err(Err::Interpreter(
+                "NotImplementedUnaryExpr for :".to_string() + &token.to_string(),
+                69,
+            )),
         }
     }
 }
@@ -138,22 +139,26 @@ impl Evaluates for BinaryExpr {
             (left, TokenType::ExclamationEqual | TokenType::EqualEqual, right) => {
                 is_equal(left, self.token.clone(), right)
             }
-            (left, token, right) => Err(Err::Interpreter(format!("NotImplementedBinaryExpr for {left} {token} {right}."), 69)),
+            (left, token, right) => Err(Err::Interpreter(
+                format!("NotImplementedBinaryExpr for {left} {token} {right}."),
+                69,
+            )),
         }
     }
 }
-
 
 /*
             Helper Functions that handle some encapsulated logic
 */
 
-
 // helper function to evaluate BinaryExpr:
 fn subtraction(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
     match (left, token, right) {
         (Literal(Number(l)), TokenType::Minus, Literal(Number(r))) => Ok(Literal(Number(l - r))),
-        (left, token, right) => Err(Err::Interpreter(format!("FailedSubtraction for {left} {token} {right}."), 69)),
+        (left, token, right) => Err(Err::Interpreter(
+            format!("FailedSubtraction for {left} {token} {right}."),
+            69,
+        )),
     }
 }
 
@@ -161,7 +166,10 @@ fn subtraction(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
 fn multiplication(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
     match (left, token, right) {
         (Literal(Number(l)), TokenType::Star, Literal(Number(r))) => Ok(Literal(Number(l * r))),
-        (left, token, right) => Err(Err::Interpreter(format!("FailedMultiplication for {left} {token} {right}."), 69)),
+        (left, token, right) => Err(Err::Interpreter(
+            format!("FailedMultiplication for {left} {token} {right}."),
+            69,
+        )),
     }
 }
 
@@ -170,13 +178,19 @@ fn division(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
     // explicit checking for division by 0 errors:
     if let Literal(Number(nr)) = right {
         if nr == 0.0 || nr == -0.0 {
-            return Err(Err::Interpreter(format!("FailedMultiplication for {left} / 0"),69));
+            return Err(Err::Interpreter(
+                format!("FailedMultiplication for {left} / 0"),
+                69,
+            ));
         }
     }
 
     match (left, token, right) {
         (Literal(Number(l)), TokenType::Slash, Literal(Number(r))) => Ok(Literal(Number(l / r))),
-        (left, token, right)=> Err(Err::Interpreter(format!("FailedDivision for {left} {token} {right}"),69)),
+        (left, token, right) => Err(Err::Interpreter(
+            format!("FailedDivision for {left} {token} {right}"),
+            69,
+        )),
     }
 }
 
@@ -194,7 +208,10 @@ fn addition(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
         }
         (Literal(String(l)), TokenType::Plus, Literal(Nil)) => Ok(Literal(String(l + "Nil"))),
         (Literal(String(l)), TokenType::Plus, Literal(String(r))) => Ok(Literal(String(l + &r))),
-        (left, token,right)=> Err(Err::Interpreter(format!("FailedAddition for {left} {token} {right}"),69)),
+        (left, token, right) => Err(Err::Interpreter(
+            format!("FailedAddition for {left} {token} {right}"),
+            69,
+        )),
     }
 }
 
@@ -202,12 +219,17 @@ fn addition(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
 fn comparison(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
     match (left, token, right) {
         (Literal(Number(l)), TokenType::Less, Literal(Number(r))) => Ok(Literal(Boolean(l < r))),
-        (Literal(Number(l)), TokenType::LessEqual, Literal(Number(r))) => Ok(Literal(Boolean(l <= r))),
+        (Literal(Number(l)), TokenType::LessEqual, Literal(Number(r))) => {
+            Ok(Literal(Boolean(l <= r)))
+        }
         (Literal(Number(l)), TokenType::Greater, Literal(Number(r))) => Ok(Literal(Boolean(l > r))),
         (Literal(Number(l)), TokenType::GreaterEqual, Literal(Number(r))) => {
             Ok(Literal(Boolean(l >= r)))
         }
-        (left, token,right)=> Err(Err::Interpreter(format!("FailedComparison for {left} {token} {right}"),69)),
+        (left, token, right) => Err(Err::Interpreter(
+            format!("FailedComparison for {left} {token} {right}"),
+            69,
+        )),
     }
 }
 
@@ -216,7 +238,10 @@ fn is_equal(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
     match (left, token, right) {
         (l, TokenType::ExclamationEqual, r) => Ok(Literal(Boolean(l != r))),
         (l, TokenType::EqualEqual, r) => Ok(Literal(Boolean(l == r))),
-        (left, token,right)=> Err(Err::Interpreter(format!("FailedEqualityCheck for {left} {token} {right}"),69)),
+        (left, token, right) => Err(Err::Interpreter(
+            format!("FailedEqualityCheck for {left} {token} {right}"),
+            69,
+        )),
     }
 }
 
@@ -225,7 +250,6 @@ fn is_equal(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
 // mod tests {
 //     use crate::{lexer, parser::AST};
 //     use RuntimeErr::*;
-
 
 //     use super::*;
 //     // some quick integration testing:
@@ -246,10 +270,6 @@ fn is_equal(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
 //             assert!(ast.errors.len() == 0);
 //         }
 
-
-
-        
-        
 //     }
 
 //     #[test]

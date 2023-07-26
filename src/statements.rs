@@ -10,7 +10,7 @@
 
 use std::rc::Rc;
 
-use crate::{types::Err, environment::Environment, expressions::Expr};
+use crate::{environment::Environment, expressions::Expr, types::Err};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
@@ -31,9 +31,7 @@ impl Statement {
                 execuate_var_statement(name, initial_value, current_env)
             }
             //Statement::ErrStatementVariable => panic!("Hit Error Statement Variable"),
-            Statement::BlockSt(statements) => {
-                execute_block_statement(statements, current_env)
-            }
+            Statement::BlockSt(statements) => execute_block_statement(statements, current_env),
         }
     }
 }
@@ -49,14 +47,21 @@ fn execute_print_statement(expr: Expr, env: Rc<Environment>) -> Result<(), Err> 
     Ok(())
 }
 
-fn execuate_var_statement(name: String, initial_value: Expr, environment: Rc<Environment>) -> Result<(), Err> {
+fn execuate_var_statement(
+    name: String,
+    initial_value: Expr,
+    environment: Rc<Environment>,
+) -> Result<(), Err> {
     // uninitialized will pass down a nil -> so they become nil;
     let value = initial_value.evaluated(environment.clone())?;
     environment.define(name, value);
     Ok(())
 }
 
-fn execute_block_statement(statements: Vec<Result<Statement, Err>>, env: Rc<Environment>) -> Result<(), Err> {
+fn execute_block_statement(
+    statements: Vec<Result<Statement, Err>>,
+    env: Rc<Environment>,
+) -> Result<(), Err> {
     crate::interpreter::execute_block(env, statements);
     Ok(())
 }
