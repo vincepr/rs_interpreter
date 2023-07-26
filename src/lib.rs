@@ -44,7 +44,7 @@ fn run(input: String, print_ast: bool) {
         println!("AST: {}", ast.print());
     }
     let expr = ast.root;
-    
+
     // join errors together and print them out:
     errors.extend(ast.errors);
     for er in errors {
