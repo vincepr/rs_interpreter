@@ -406,7 +406,7 @@ mod tests {
     #[test]
     fn integration_test_mult_before_add() {
         // AST: <1 + <2 * 3>>
-        let s = new_scanner("1+2*3");
+        let s = new_scanner("1+2*3;");
         let (tokens, lexer_errs) = s.results();
         assert!(lexer_errs.len() == 0);
         let ast = AST::new(tokens);
@@ -429,7 +429,7 @@ mod tests {
     #[test]
     fn integration_test_parenthesis() {
         // AST: <(<1 + 2>) * 3>
-        let s = new_scanner("(1-2)/3");
+        let s = new_scanner("(1-2)/3;");
         let (tokens, lexer_errs) = s.results();
         assert!(lexer_errs.len() == 0);
         let ast = AST::new(tokens);

@@ -245,78 +245,79 @@ fn is_equal(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
     }
 }
 
-// #[rustfmt::skip]
-// #[cfg(test)]
-// mod tests {
-//     use crate::{lexer, parser::AST};
-//     use RuntimeErr::*;
+#[rustfmt::skip]
+#[cfg(test)]
+mod tests {
+    use crate::{lexer, parser::AST};
 
-//     use super::*;
-//     // some quick integration testing:
-//     fn test(input: &str, expected: Expr){
-//         //
-//         let global_scope = Rc::new(crate::environment::Environment::new(None));
-//         //
-//         let s = lexer::new_scanner(input);
-//         let (tokens, lexer_errs) = s.results();
-//         let ast = AST::new(tokens);
-//         let statements = ast.root;
-//         for s in statements{
-//             if let Statement::ExprSt(expr) = s.unwrap(){
-//                 let res = expr.evaluated(global_scope.clone());
-//                 assert_eq!(res, expected);
-//             }else { panic!("expected a Expression that evaluates!")}
-//             assert!(lexer_errs.len() == 0);
-//             assert!(ast.errors.len() == 0);
-//         }
 
-//     }
+    use super::*;
+    // some quick integration testing:
+    fn test(input: &str, expected: Expr){
+        //
+        let global_scope = Rc::new(crate::environment::Environment::new(None));
+        //
+        let s = lexer::new_scanner(input);
+        let (tokens, lexer_errs) = s.results();
+        let ast = AST::new(tokens);
+        let statements = ast.root;
+        for s in statements{
+            if let Ok(Statement::ExprSt(expr)) = s{
+                let res = expr.evaluated(global_scope.clone());
+                assert_eq!(res, Ok(expected.clone()));
+            } 
+            else { panic!("expected a Expression that evaluates!")}
+            assert!(lexer_errs.len() == 0);
+            assert!(ast.errors.len() == 0);
+        }
 
-//     #[test]
-//     fn equal() {
-//         // AST: <true == false>     =>   true
-//         test("true == false;", Literal(Boolean(false)));
-//         test("true != true;", Literal(Boolean(false)));
-//         test("10 == 10;", Literal(Boolean(true)));
-//         test("\"hello\" != \"hello\";", Literal(Boolean(false)));
-//         test("nil == nil;", Literal(Boolean(true)));
-//     }
+    }
 
-//     #[test]
-//     fn comparison() {
-//         test("1 < 2", Literal(Boolean(true)));
-//         test("10<=10", Literal(Boolean(true)));
-//         test("10>10", Literal(Boolean(false)));
-//         test("10>=10", Literal(Boolean(true)));
-//         test("true > false", RuntimeErr(FailedComparison));
-//         test("\"hello\" <= \"hello\";", RuntimeErr(FailedComparison));
-//     }
+    #[test]
+    fn equal() {
+        // AST: <true == false>     =>   true
+        test("true == false;", Literal(Boolean(false)));
+        test("true != true;", Literal(Boolean(false)));
+        test("10 == 10;", Literal(Boolean(true)));
+        test("\"hello\" != \"hello\";", Literal(Boolean(false)));
+        test("nil == nil;", Literal(Boolean(true)));
+    }
 
-//     #[test]
-//     fn addition_subtraction() {
-//         test("1.1+2", Literal(Number(3.1)));
-//         test("1.2-2", Literal(Number(-0.8)));
-//         test("\"hello\" + \" bye\";", Literal(String("hello bye".to_string())));
-//         test("\"hello_\" + nil", Literal(String("hello_Nil".to_string())));
-//         test("\"hello_\" + 3", Literal(String("hello_3".to_string())));
-//         test("\"hello_\" + true", Literal(String("hello_true".to_string())));
-//         test("\"hello_\" + false", Literal(String("hello_false".to_string())));
-//         test("true+false", RuntimeErr(FailedAddition));
-//     }
+    #[test]
+    fn comparison() {
+        test("1 < 2;", Literal(Boolean(true)));
+        test("10<=10;", Literal(Boolean(true)));
+        test("10>10;", Literal(Boolean(false)));
+        test("10>=10;", Literal(Boolean(true)));
+        // test("true > false;", RuntimeErr(FailedComparison));
+        // test("\"hello\" <= \"hello\";", RuntimeErr(FailedComparison));
+    }
 
-//     #[test]
-//     fn division() {
-//         test("1/2", Literal(Number(0.5)));
-//         test("-2/0.5", Literal(Number(-4.0)));
-//         test("1/0", RuntimeErr(FailedDivisionByZero));
-//         test("10 / nil", RuntimeErr(FailedDivision));
-//         test("true / 2", RuntimeErr(FailedDivision));
-//     }
+    #[test]
+    fn addition_subtraction() {
+        test("1.1+2;", Literal(Number(3.1)));
+        test("1.2-2;", Literal(Number(-0.8)));
+        test("\"hello\" + \" bye\";", Literal(String("hello bye".to_string())));
+        test("\"hello_\" + nil;", Literal(String("hello_Nil".to_string())));
+        test("\"hello_\" + 3;", Literal(String("hello_3".to_string())));
+        test("\"hello_\" + true;", Literal(String("hello_true".to_string())));
+        test("\"hello_\" + false;", Literal(String("hello_false".to_string())));
+        // test("true+false;", RuntimeErr(FailedAddition));
+    }
 
-//     #[test]
-//     fn multiplication() {
-//         test("1.1*2", Literal(Number(2.2)));
-//         test("-1.2*0.2", Literal(Number(-0.24)));
-//         test("-1.2*nil", RuntimeErr(FailedMultiplication));
-//     }
-// }
+    #[test]
+    fn division() {
+        test("1/2;", Literal(Number(0.5)));
+        test("-2/0.5;", Literal(Number(-4.0)));
+        // test("1/0;", RuntimeErr(FailedDivisionByZero));
+        // test("10 / nil;", RuntimeErr(FailedDivision));
+        // test("true / 2;", RuntimeErr(FailedDivision));
+    }
+
+    #[test]
+    fn multiplication() {
+        test("1.1*2;", Literal(Number(2.2)));
+        test("-1.2*0.2;", Literal(Number(-0.24)));
+        // test("-1.2*nil;", RuntimeErr(FailedMultiplication));
+    }
+}
