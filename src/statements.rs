@@ -32,6 +32,11 @@ pub enum Statement {
         condition: Expr,
         body: Box<Statement>,
     },
+    FunctionSt {
+        name: String,
+        params: Vec<String>,
+        body: Vec<Result<Statement, Err>>,
+    },
 }
 
 impl Statement {

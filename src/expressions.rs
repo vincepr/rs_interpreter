@@ -102,7 +102,11 @@ impl Function {
             Function::Declared { arity } => *arity,
         }
     }
-    pub fn call(&self, env: Rc<Environment>, arguments: Vec<Result<Expr, Err>>) -> Result<Expr, Err> {
+    pub fn call(
+        &self,
+        env: Rc<Environment>,
+        arguments: Vec<Result<Expr, Err>>,
+    ) -> Result<Expr, Err> {
         match self {
             Function::Native { arity: _, func } => {
                 return Ok(Expr::Literal(func()?));

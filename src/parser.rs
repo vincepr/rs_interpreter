@@ -144,7 +144,9 @@ impl<'a> Parser<'a> {
 
 impl<'a> Parser<'a> {
     fn declaration(&mut self) -> Result<Statement, Err> {
-        //TODO crafting interpreters handles runtime errors here, decide where i want to if it fails it does synchronize() and return null.
+        if self.expect(vec![Type::Fun]) {
+            return self.function();
+        }
         if self.expect(vec![Type::Var]) {
             return self.var_declaration();
         }
@@ -277,6 +279,38 @@ impl<'a> Parser<'a> {
         let expr: Expr = self.expression()?;
         _ = self.consume(Type::Semicolon, "Expected ; after value.")?;
         return Ok(Statement::ExprSt(expr));
+    }
+
+    fn function(&mut self) -> Result<Statement, Err> {
+        let name = self.consume(Type::Identifier, "Expect function/method name.")?.lexeme.to_string();
+        
+        self.consume(Type::OpenParen, "Expect '(' after function/method name.");
+
+        let mut params = Vec::new();
+        if !self.check(Type::CloseParen) {
+            loop {
+                if params.len() >= 255 {
+                    return Err(Err::Parser(
+                        "Can't have more than 255 parameters.".into(),
+                        self.peek().line,
+                    ));
+                }
+                params.push(
+                    self.consume(Type::Identifier, "Expect parameter name.")?
+                        .lexeme
+                        .to_string(),
+                );
+
+                if !self.expect(vec![Type::Comma]) {
+                    break;
+                } // do while
+            }
+        }
+        self.consume(Type::CloseParen, "Expect ')' after parameters.");
+        self.consume(Type::OpenBrace, "Expect '{' before function/method body.");
+        let body = self.block();
+        return Ok(Statement::FunctionSt { name, params, body });
+
     }
 
     /// a new block/scope
