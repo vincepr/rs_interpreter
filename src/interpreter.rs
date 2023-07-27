@@ -3,8 +3,8 @@ use std::rc::Rc;
 use crate::{
     environment::Environment,
     expressions::{
-        BinaryExpr, Expr, Expr::*, GroupingExpr, LiteralExpr, LiteralExpr::*, LogicalExpr,
-        UnaryExpr, VarAssignExpr, VarReadExpr,
+        BinaryExpr, Expr, Expr::*, FnCallExpr, Function, GroupingExpr, LogicalExpr, UnaryExpr,
+        Value, Value::*, VarAssignExpr, VarReadExpr,
     },
     statements::Statement,
     types::{Err, TokenType},
@@ -13,11 +13,35 @@ use crate::{
 /// Takes the root of the AST and evaluates it down to a result.
 pub fn interpret(inputs: Vec<Result<Statement, Err>>) {
     // envirnoment that holds reference to all variable-names-> values mapped:
-    let global_scope = Rc::new(Environment::new(None));
+    let global_scope: Rc<Environment> = Rc::new(Environment::new(None));
 
     for statement in inputs {
         exececute(global_scope.clone(), statement);
     }
+}
+
+/*
+        To make native functions ex 'time()' accessible we inject them into the global_scope:
+*/
+fn build_global_scope() -> Rc<Environment> {
+    let global_scope: Rc<Environment> = Rc::new(Environment::new(None));
+    // next we inject our custom functions, so they become available in global scope:
+    let clock = Expr::Literal(Value::Callable(Rc::new(Function::Native {
+        arity: 0,
+        func: clock_native,
+    })));
+    global_scope.define("clock".into(), clock);
+    return global_scope;
+}
+
+fn clock_native() -> Result<Value, Err> {
+    Ok(Value::Number(get_epoch_ms()))
+}
+fn get_epoch_ms() -> f64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis() as f64
 }
 
 /*
@@ -70,6 +94,8 @@ impl Expr {
             Binary(expr) => expr.evaluated(env),
             Logical(expr) => expr.evaluated(env),
 
+            FnCall(expr) => expr.eval_with_env(env),
+
             VarAssign(expr) => expr.eval_with_env(env),
             VarRead(expr) => expr.eval_with_env(env),
         }
@@ -90,7 +116,36 @@ impl VarReadExpr {
     }
 }
 
-impl Evaluates for LiteralExpr {
+impl FnCallExpr {
+    fn eval_with_env(&self, env: Rc<Environment>) -> Result<Expr, Err> {
+        let callee = self.callee.evaluated(env.clone())?;
+        let mut arguments = Vec::new();
+        for arg in self.arguments.clone() {
+            arguments.push(arg.evaluated(env.clone()))
+        }
+        // check if were trying to call function or obj not like "str".do()
+
+        if let Expr::Literal(Value::Callable(function)) = callee.clone() {
+            if arguments.len() != function.arity() {
+                return Err(Err::Interpreter(
+                    format!(
+                        "Expected {} arguments but got {}.",
+                        function.arity(),
+                        arguments.len()
+                    ),
+                    69,
+                ));
+            }
+            return function.call(env.clone(), arguments);
+        }
+        return Err(Err::Interpreter(
+            format!("Can only call functions and classes."),
+            69,
+        ));
+    }
+}
+
+impl Evaluates for Value {
     fn evaluated(&self, _env: Rc<Environment>) -> Result<Expr, Err> {
         return Ok(Literal(self.clone()));
     }
@@ -154,12 +209,12 @@ impl Evaluates for LogicalExpr {
 
         if self.token == TokenType::Or {
             if is_truthy(left.clone()) {
-                return Ok(Expr::Literal(LiteralExpr::Boolean(true)));
+                return Ok(Expr::Literal(Value::Boolean(true)));
             }
         } else {
             // implicit TokenType::And
             if !is_truthy(left.clone()) {
-                return Ok(Expr::Literal(LiteralExpr::Boolean(false)));
+                return Ok(Expr::Literal(Value::Boolean(false)));
             }
         }
         // we just want to return a Bool so we have to check truthiness of right side:
@@ -167,10 +222,10 @@ impl Evaluates for LogicalExpr {
 
         match (self.token.clone(), is_truthy(right.clone())) {
             // a or b = false, true -> true
-            (TokenType::Or, true) => Ok(Expr::Literal(LiteralExpr::Boolean(true))),
+            (TokenType::Or, true) => Ok(Expr::Literal(Value::Boolean(true))),
             // a and b = true , true -> true
-            (TokenType::And, true) => Ok(Expr::Literal(LiteralExpr::Boolean(true))),
-            _ => Ok(Expr::Literal(LiteralExpr::Boolean(false))),
+            (TokenType::And, true) => Ok(Expr::Literal(Value::Boolean(true))),
+            _ => Ok(Expr::Literal(Value::Boolean(false))),
         }
     }
 }
@@ -276,7 +331,7 @@ fn is_equal(left: Expr, token: TokenType, right: Expr) -> Result<Expr, Err> {
 // helper function to compare expression for truthiness: (ex: if "string" {...})
 pub fn is_truthy(expr: Expr) -> bool {
     match expr {
-        Expr::Literal(LiteralExpr::Boolean(b)) => b,
+        Expr::Literal(Value::Boolean(b)) => b,
         _ => return false,
     }
 }
