@@ -3,7 +3,7 @@ use std::mem;
 use crate::{
     expressions::{
         BinaryExpr, Expr, GroupingExpr, LiteralExpr, LogicalExpr, UnaryExpr, VarAssignExpr,
-        VarReadExpr,
+        VarReadExpr, FnCallExpr,
     },
     statements::Statement,
     types::{Err, Token, TokenType as Type},
@@ -418,7 +418,34 @@ impl<'a> Parser<'a> {
                 right: Box::new(self.unary()?),
             }));
         }
-        self.primary()
+        self.call()
+    }
+
+    fn finish_call(&mut self, callee: Expr) -> Result<Expr, Err> {
+        let mut arguments = Vec::new();
+        if !self.check(Type::CloseParen) {
+            loop {
+                if arguments.len() >= 255 {
+                    return Err(Err::Parser("Can't have more than 255 arguments.".into(), self.peek().line))
+                }
+                arguments.push(self.expression()?);
+                if !self.expect(vec![Type::Comma]) {break;}     // basically do while...
+            } 
+        }
+        let paren = self.consume(Type::CloseParen, "Expect ')' after arguments.")?;
+        Ok(Expr::FnCall(FnCallExpr { callee:Box::new(callee), paren: paren.typ.clone(), arguments: arguments }))
+    }
+
+    fn call(&mut self) -> Result<Expr, Err> {
+        let mut expr = self.primary();
+        loop {
+            if self.expect(vec![Type::OpenParen])  {
+                expr = self.finish_call(expr?);
+            } else {
+                break;
+            }
+        }
+        expr
     }
 
     fn primary(&mut self) -> Result<Expr, Err> {

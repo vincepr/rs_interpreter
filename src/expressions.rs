@@ -1,4 +1,4 @@
-use crate::types::TokenType;
+use crate::types::{TokenType, Token};
 
 // Collection of all Expressions. They are the building blocks of our AST
 // We expose those to our backend-interpreter AND middleend-parser
@@ -12,6 +12,7 @@ pub enum Expr {
     VarRead(VarReadExpr),
     VarAssign(VarAssignExpr),
     Logical(LogicalExpr),
+    FnCall(FnCallExpr)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -63,6 +64,13 @@ impl VarAssignExpr {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct FnCallExpr {
+    pub callee: Box<Expr>,
+    pub paren: TokenType ,
+    pub arguments: Vec<Expr>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum LiteralExpr {
     Boolean(bool),
     Nil,
@@ -94,6 +102,7 @@ impl std::fmt::Display for Expr {
             Expr::VarAssign(VarAssignExpr { name, value }) => {
                 f.write_fmt(format_args!("<{name} = {value}>"))
             } //Expr::RuntimeErr(e) => write!(f, "RuntimeErr({:?})", e),
+            Expr::FnCall(FnCallExpr { callee, paren:_, arguments:_ }) => f.write_fmt(format_args!("{callee}()"))
               //_ => write!(f, "{:?}", self),             //Failback to Debug-Printing for unimplemented expressions?
         }
     }

@@ -6,6 +6,7 @@ while (x>0) {
   x = x-10;
 }
 
+for (var i=0; i<5; i=+=1) print i;
 // expect: 40
 // expect: 30
 // expect: 20
