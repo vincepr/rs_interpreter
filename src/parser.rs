@@ -284,7 +284,7 @@ impl<'a> Parser<'a> {
         if !self.check(Type::Semicolon) {
             value = self.expression()?;
         }
-        self.consume(Type::Semicolon, "Expect ';' after return value.");
+        self.consume(Type::Semicolon, "Expect ';' after return value.")?;
         return Ok(Statement::ReturnSt { keyword, value });
     }
 
@@ -300,7 +300,7 @@ impl<'a> Parser<'a> {
             .lexeme
             .to_string();
 
-        self.consume(Type::OpenParen, "Expect '(' after function/method name.");
+        self.consume(Type::OpenParen, "Expect '(' after function/method name.")?;
 
         let mut params = Vec::new();
         if !self.check(Type::CloseParen) {
@@ -322,8 +322,8 @@ impl<'a> Parser<'a> {
                 } // do while
             }
         }
-        self.consume(Type::CloseParen, "Expect ')' after parameters.");
-        self.consume(Type::OpenBrace, "Expect '{' before function/method body.");
+        self.consume(Type::CloseParen, "Expect ')' after parameters.")?;
+        self.consume(Type::OpenBrace, "Expect '{' before function/method body.")?;
         let body = self.block();
         return Ok(Statement::FunctionSt(FunctionStatement {
             name,

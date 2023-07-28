@@ -12,7 +12,7 @@ use std::rc::Rc;
 
 use crate::{
     environment::Environment,
-    expressions::{Expr, FnCallExpr, Function, Value},
+    expressions::{Expr, Function, Value},
     interpreter::{execute_block, is_truthy},
     types::Err,
 };

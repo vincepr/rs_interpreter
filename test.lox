@@ -4,7 +4,7 @@ fun loopi() {
   var x = 100;
   while (x>0) {
     var tem = x /123.124;
-    temp = temp / 1252345.43;   // scope seem out of wack! cant reach temp here. undefined
+    //temp = temp / 1252345.43;   // scope seem out of wack! cant reach temp here. undefined
     if (x<50) print x;
     x = x-10;
   }

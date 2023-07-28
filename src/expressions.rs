@@ -3,8 +3,8 @@ use std::rc::Rc;
 use crate::{
     environment::Environment,
     interpreter::execute_block,
-    statements::{FunctionStatement, Statement},
-    types::{Err, Token, TokenType},
+    statements::FunctionStatement,
+    types::{Err, TokenType},
 };
 
 // Collection of all Expressions. They are the building blocks of our AST
@@ -106,14 +106,14 @@ impl Function {
                 function_st,
                 closure: _,
             } => {
-                let FunctionStatement { name, params, body } = function_st;
+                let FunctionStatement { name:_, params, body:_ } = function_st;
                 return params.len();
             }
         }
     }
     pub fn call(
         &self,
-        env: Rc<Environment>,
+        _env: Rc<Environment>,  // TODO: we probably can remove env? maybe do methods first? do they use this call?
         arguments: Vec<Result<Expr, Err>>,
     ) -> Result<Expr, Err> {
         match self {
@@ -152,7 +152,7 @@ impl std::fmt::Display for Expr {
             Expr::Literal(Value::Nil) => f.write_str("nil"),
             Expr::Literal(Value::String(s)) => s.fmt(f),
             Expr::Literal(Value::Number(n)) => n.fmt(f),
-            Expr::Literal(Value::Callable(n)) => write!(f, "{:?}", self),
+            Expr::Literal(Value::Callable(n)) => write!(f, "{:#?}", n),
 
             Expr::Binary(BinaryExpr { left, token, right }) => {
                 f.write_fmt(format_args!("<{left} {token} {right}>"))
