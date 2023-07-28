@@ -78,7 +78,7 @@ fn execute_return_statement(keyword:String, value:Expr, env:Rc<Environment>) -> 
     Err(Err::ReturnValue(return_val))
 }
 
-/// a function call 'name(...params){...body}'
+/// a function is declared 'fun name(...params){ ...body; }'
 fn execute_function_statement(fn_st: FunctionStatement, env: Rc<Environment>) -> Result<(), Err> {
     let FunctionStatement{name, ..} = fn_st.clone();
     let function = Expr::Literal(Value::Callable(Rc::new(Function::Declared { functionSt:fn_st })));
