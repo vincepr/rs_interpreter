@@ -41,9 +41,9 @@ pub enum Statement {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FunctionStatement{
-    name: String,
-    params: Vec<String>,
-    body: Vec<Result<Statement, Err>>,
+    pub name: String,
+    pub params: Vec<String>,
+    pub body: Vec<Result<Statement, Err>>,
 }
 
 impl Statement {
@@ -65,13 +65,22 @@ impl Statement {
                 execute_while_statement(condition, *body, current_env)
             }
             Self::FunctionSt(fn_st) => execute_function_statement(fn_st, current_env),
+            Self::ReturnSt { keyword, value } => execute_return_statement(keyword, value, current_env),
         }
     }
 }
 
+fn execute_return_statement(keyword:String, value:Expr, env:Rc<Environment>) -> Result<(), Err>{
+    let mut return_val = Expr::Literal(Value::Nil);
+    if value != Expr::Literal(Value::Nil) {
+        return_val = value.evaluated(env)?;
+    }
+    Err(Err::ReturnValue(return_val))
+}
+
 /// a function call 'name(...params){...body}'
 fn execute_function_statement(fn_st: FunctionStatement, env: Rc<Environment>) -> Result<(), Err> {
-    let FunctionStatement{name, ..} = fn_st;
+    let FunctionStatement{name, ..} = fn_st.clone();
     let function = Expr::Literal(Value::Callable(Rc::new(Function::Declared { functionSt:fn_st })));
     env.define(name, function);
     Ok(())

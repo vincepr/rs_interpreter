@@ -125,9 +125,7 @@ impl Function {
                     this_env.define(params[i].clone(), arguments[i].clone()?)
                 }
                 execute_block(this_env, body.clone());
-                todo!();
-                return Ok(())
-
+                return Ok(Expr::Literal(Value::Nil));
             }
         }
     }

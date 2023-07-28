@@ -1,13 +1,18 @@
 // using this file while developing *make run* - automatically runs this file
+fun loopi() {
+  var x = 100;
+  while (x>0) {
+    if (x<50) print x;
+    x = x-10;
+  }
+}
+print loopi();  // functions that return implicit nil work just fine
 
-var x = 100;
-while (x>0) {
-  if (x<50) print x;
-  x = x-10;
+fun loopii() {
+  for (var i=0; i<5; i=i+1) print i;
+  return 12;
 }
 
-for (var i=0; i<5; i=i+1) print i;
-// expect: 40
-// expect: 30
-// expect: 20
-// expect: 10
+print loopii();
+print loopii(); // never gets reached. My guess is the Error we return as Err::ReturnValue propagates up!
+print clock();  // also undefined variable -> so something went wrong on the pipeline for native fn's aswell

@@ -136,7 +136,12 @@ impl FnCallExpr {
                     69,
                 ));
             }
-            return function.call(env.clone(), arguments);
+            // Functions 'throw' on Return to get here, so we match for that special return-error
+            match function.call(env.clone(), arguments) {
+                Err(Err::ReturnValue(return_val)) => return Ok(return_val),
+                res => return res,
+                
+            }
         }
         return Err(Err::Interpreter(
             format!("Can only call functions and classes."),
