@@ -33,6 +33,10 @@ pub enum Statement {
         body: Box<Statement>,
     },
     FunctionSt(FunctionStatement),
+    ReturnSt {
+        keyword: String,
+        value: Expr,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

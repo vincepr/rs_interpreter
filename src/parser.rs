@@ -239,6 +239,9 @@ impl<'a> Parser<'a> {
         if self.expect(vec![Type::Print]) {
             return self.print_statement();
         }
+        if self.expect(vec![Type::Return]) {
+            return self.return_statement();
+        }
         if self.expect(vec![Type::While]) {
             return self.while_statement();
         }
@@ -273,6 +276,16 @@ impl<'a> Parser<'a> {
         let value: Expr = self.expression()?;
         _ = self.consume(Type::Semicolon, "Expected ; after value.")?;
         return Ok(Statement::PrintSt(value));
+    }
+    
+    fn return_statement(&mut self) -> Result<Statement, Err> {
+        let keyword = self.previous().lexeme.to_string();
+        let mut value = Expr::Literal(Value::Nil);
+        if !self.check(Type::Semicolon) {
+            value = self.expression()?;
+        }
+        self.consume(Type::Semicolon, "Expect ';' after return value.");
+        return Ok(Statement::ReturnSt { keyword, value });
     }
 
     fn expression_statement(&mut self) -> Result<Statement, Err> {
