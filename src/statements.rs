@@ -72,7 +72,11 @@ impl Statement {
     }
 }
 
-fn execute_return_statement(_keyword: String, value: Expr, env: Rc<Environment>) -> Result<(), Err> {
+fn execute_return_statement(
+    _keyword: String,
+    value: Expr,
+    env: Rc<Environment>,
+) -> Result<(), Err> {
     let mut return_val = Expr::Literal(Value::Nil);
     if value != Expr::Literal(Value::Nil) {
         return_val = value.evaluated(env)?;
@@ -128,7 +132,7 @@ fn execute_block_statement(
     statements: Vec<Result<Statement, Err>>,
     env: Rc<Environment>,
 ) -> Result<(), Err> {
-    execute_block(env, statements);
+    let _ = execute_block(env, statements); // it is only possible to return from functions in lox
     Ok(())
 }
 

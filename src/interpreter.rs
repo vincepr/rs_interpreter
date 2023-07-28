@@ -16,7 +16,7 @@ pub fn interpret(inputs: Vec<Result<Statement, Err>>) {
     let global_scope = build_global_scope();
 
     for statement in inputs {
-        exececute(global_scope.clone(), statement).unwrap();    // this will panic when we return at top level, maybe give it a proper err msg
+        exececute(global_scope.clone(), statement).unwrap(); // this will panic when we return at top level, maybe give it a proper err msg
     }
 }
 
@@ -54,7 +54,7 @@ fn exececute(scope: Rc<Environment>, statement: Result<Statement, Err>) -> Resul
             // after trying execution we check if we hit an runtime error, if so we print then abort
             if let Err(e) = st.execute(scope) {
                 if let Err::ReturnValue(value) = e.clone() {
-                    return Err(Err::ReturnValue(value));    // return values use this unwind up to the next FunctionCall
+                    return Err(Err::ReturnValue(value)); // return values use this unwind up to the next FunctionCall
                 }
                 println!("{e}");
                 std::process::exit(1);
@@ -66,17 +66,19 @@ fn exececute(scope: Rc<Environment>, statement: Result<Statement, Err>) -> Resul
             println!("{e}");
             std::process::exit(1);
         }
-
     }
 }
 
 /// gets called from Statements-'visitorpattern'
-pub fn execute_block(parent_scope: Rc<Environment>, statements: Vec<Result<Statement, Err>>) -> Result<(), Err> {
+pub fn execute_block(
+    parent_scope: Rc<Environment>,
+    statements: Vec<Result<Statement, Err>>,
+) -> Result<(), Err> {
     // create the new Scope:
     let local_scope = Rc::new(Environment::new(Some(parent_scope)));
 
     for statement in statements {
-        exececute(local_scope.clone(), statement)?;     // we pass the return value up
+        exececute(local_scope.clone(), statement)?; // we pass the return value up
     }
     Ok(())
 }

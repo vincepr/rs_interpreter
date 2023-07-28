@@ -106,14 +106,18 @@ impl Function {
                 function_st,
                 closure: _,
             } => {
-                let FunctionStatement { name:_, params, body:_ } = function_st;
+                let FunctionStatement {
+                    name: _,
+                    params,
+                    body: _,
+                } = function_st;
                 return params.len();
             }
         }
     }
     pub fn call(
         &self,
-        _env: Rc<Environment>,  // TODO: we probably can remove env? maybe do methods first? do they use this call?
+        _env: Rc<Environment>, // TODO: we probably can remove env? maybe do methods first? do they use this call?
         arguments: Vec<Result<Expr, Err>>,
     ) -> Result<Expr, Err> {
         match self {
@@ -137,10 +141,10 @@ impl Function {
                     this_env.define(params[i].clone(), arguments[i].clone()?)
                 }
                 // we catch the upcoming return value wrapped in an error
-                if let Err(Err::ReturnValue(val))= execute_block(this_env, body.clone()){
+                if let Err(Err::ReturnValue(val)) = execute_block(this_env, body.clone()) {
                     return Ok(val);
                 }
-                return Ok(Expr::Literal(Value::Nil));   // or use default nil if no return value
+                return Ok(Expr::Literal(Value::Nil)); // or use default nil if no return value
             }
         }
     }
