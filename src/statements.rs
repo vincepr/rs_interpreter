@@ -12,7 +12,7 @@ use std::rc::Rc;
 
 use crate::{
     environment::Environment,
-    expressions::Expr,
+    expressions::{Expr, Function, Value, FnCallExpr},
     interpreter::{execute_block, is_truthy},
     types::Err,
 };
@@ -32,11 +32,14 @@ pub enum Statement {
         condition: Expr,
         body: Box<Statement>,
     },
-    FunctionSt {
-        name: String,
-        params: Vec<String>,
-        body: Vec<Result<Statement, Err>>,
-    },
+    FunctionSt(FunctionStatement),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionStatement{
+    name: String,
+    params: Vec<String>,
+    body: Vec<Result<Statement, Err>>,
 }
 
 impl Statement {
@@ -57,8 +60,17 @@ impl Statement {
             Self::While { condition, body } => {
                 execute_while_statement(condition, *body, current_env)
             }
+            Self::FunctionSt(fn_st) => execute_function_statement(fn_st, current_env),
         }
     }
+}
+
+/// a function call 'name(...params){...body}'
+fn execute_function_statement(fn_st: FunctionStatement, env: Rc<Environment>) -> Result<(), Err> {
+    let FunctionStatement{name, ..} = fn_st;
+    let function = Expr::Literal(Value::Callable(Rc::new(Function::Declared { functionSt:fn_st })));
+    env.define(name, function);
+    Ok(())
 }
 
 fn execute_while_statement(

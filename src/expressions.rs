@@ -3,6 +3,7 @@ use std::rc::Rc;
 use crate::{
     environment::Environment,
     types::{Err, Token, TokenType},
+    statements::{Statement, FunctionStatement}, interpreter::execute_block
 };
 
 // Collection of all Expressions. They are the building blocks of our AST
@@ -92,14 +93,17 @@ pub enum Function {
         func: fn() -> Result<Value, Err>,
     },
     Declared {
-        arity: usize,
+        functionSt:FunctionStatement,
     },
 }
 impl Function {
     pub fn arity(&self) -> usize {
         match self {
             Function::Native { arity, func: _ } => *arity,
-            Function::Declared { arity } => *arity,
+            Function::Declared { functionSt} => {
+                let FunctionStatement{ name, params, body }=functionSt;
+                return params.len();
+            },
         }
     }
     pub fn call(
@@ -109,11 +113,23 @@ impl Function {
     ) -> Result<Expr, Err> {
         match self {
             Function::Native { arity: _, func } => {
+                // call() on Native functions just execuates the callback we stored in our map
                 return Ok(Expr::Literal(func()?));
             }
-            Function::Declared { arity } => {}
+            Function::Declared { functionSt } => {
+                // call() on Normal Functions (not Methods etc.)
+                let FunctionStatement{name, params, body} = functionSt;
+                let this_env = Rc::new(Environment::new(Some(env))); // create new local-env for this function
+                for i in 0..params.len() {
+                    // we take arguments and write them to local env, so body can access them:
+                    this_env.define(params[i].clone(), arguments[i].clone()?)
+                }
+                execute_block(this_env, body.clone());
+                todo!();
+                return Ok(())
+
+            }
         }
-        todo!();
     }
 }
 

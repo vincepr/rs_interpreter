@@ -5,7 +5,7 @@ use crate::{
         BinaryExpr, Expr, FnCallExpr, GroupingExpr, LogicalExpr, UnaryExpr, Value, VarAssignExpr,
         VarReadExpr,
     },
-    statements::Statement,
+    statements::{Statement, FunctionStatement},
     types::{Err, Token, TokenType as Type},
 };
 
@@ -309,7 +309,7 @@ impl<'a> Parser<'a> {
         self.consume(Type::CloseParen, "Expect ')' after parameters.");
         self.consume(Type::OpenBrace, "Expect '{' before function/method body.");
         let body = self.block();
-        return Ok(Statement::FunctionSt { name, params, body });
+        return Ok(Statement::FunctionSt(FunctionStatement{ name, params, body }) );
 
     }
 
