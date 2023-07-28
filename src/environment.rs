@@ -9,6 +9,7 @@ use crate::{expressions::Expr, types::Err};
 /// Every local scope ex: {} gets its own map for local variables/functions
 /// - to easily share the Environments we used a Rc (reference counted pointer) we can just clone
 /// - to mutate in a Rc we need to use a RefCell inside of it. To make that part mutable
+#[derive(Debug, Clone, PartialEq)]
 pub struct Environment {
     /// The parent Scope {} we 'live in'
     pub enclosing: Option<Rc<Environment>>,

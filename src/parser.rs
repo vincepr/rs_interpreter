@@ -2,10 +2,10 @@ use std::mem;
 
 use crate::{
     expressions::{
-        BinaryExpr, Expr, GroupingExpr, LiteralExpr, LogicalExpr, UnaryExpr, VarAssignExpr,
+        BinaryExpr, Expr, FnCallExpr, GroupingExpr, LogicalExpr, UnaryExpr, Value, VarAssignExpr,
         VarReadExpr,
     },
-    statements::Statement,
+    statements::{FunctionStatement, Statement},
     types::{Err, Token, TokenType as Type},
 };
 
@@ -144,7 +144,9 @@ impl<'a> Parser<'a> {
 
 impl<'a> Parser<'a> {
     fn declaration(&mut self) -> Result<Statement, Err> {
-        //TODO crafting interpreters handles runtime errors here, decide where i want to if it fails it does synchronize() and return null.
+        if self.expect(vec![Type::Fun]) {
+            return self.function();
+        }
         if self.expect(vec![Type::Var]) {
             return self.var_declaration();
         }
@@ -159,7 +161,7 @@ impl<'a> Parser<'a> {
         } else {
             return Err(Err::Parser("Expected variable name after var".into(), 8));
         }
-        let mut initializer = Expr::Literal(LiteralExpr::Nil); // null if not initialized
+        let mut initializer = Expr::Literal(Value::Nil); // null if not initialized
         if self.expect(vec![Type::Equal]) {
             initializer = self.expression()?;
         }
@@ -214,7 +216,7 @@ impl<'a> Parser<'a> {
             body = Ok(Statement::BlockSt(artificial_body));
         }
         if condition == None {
-            condition = Some(Expr::Literal(LiteralExpr::Boolean(true)));
+            condition = Some(Expr::Literal(Value::Boolean(true)));
         }
         // save to unwrap here since we know we guarded against it (we know they exist)
         body = Ok(Statement::While {
@@ -236,6 +238,9 @@ impl<'a> Parser<'a> {
         }
         if self.expect(vec![Type::Print]) {
             return self.print_statement();
+        }
+        if self.expect(vec![Type::Return]) {
+            return self.return_statement();
         }
         if self.expect(vec![Type::While]) {
             return self.while_statement();
@@ -273,10 +278,58 @@ impl<'a> Parser<'a> {
         return Ok(Statement::PrintSt(value));
     }
 
+    fn return_statement(&mut self) -> Result<Statement, Err> {
+        let keyword = self.previous().lexeme.to_string();
+        let mut value = Expr::Literal(Value::Nil);
+        if !self.check(Type::Semicolon) {
+            value = self.expression()?;
+        }
+        self.consume(Type::Semicolon, "Expect ';' after return value.")?;
+        return Ok(Statement::ReturnSt { keyword, value });
+    }
+
     fn expression_statement(&mut self) -> Result<Statement, Err> {
         let expr: Expr = self.expression()?;
         _ = self.consume(Type::Semicolon, "Expected ; after value.")?;
         return Ok(Statement::ExprSt(expr));
+    }
+
+    fn function(&mut self) -> Result<Statement, Err> {
+        let name = self
+            .consume(Type::Identifier, "Expect function/method name.")?
+            .lexeme
+            .to_string();
+
+        self.consume(Type::OpenParen, "Expect '(' after function/method name.")?;
+
+        let mut params = Vec::new();
+        if !self.check(Type::CloseParen) {
+            loop {
+                if params.len() >= 255 {
+                    return Err(Err::Parser(
+                        "Can't have more than 255 parameters.".into(),
+                        self.peek().line,
+                    ));
+                }
+                params.push(
+                    self.consume(Type::Identifier, "Expect parameter name.")?
+                        .lexeme
+                        .to_string(),
+                );
+
+                if !self.expect(vec![Type::Comma]) {
+                    break;
+                } // do while
+            }
+        }
+        self.consume(Type::CloseParen, "Expect ')' after parameters.")?;
+        self.consume(Type::OpenBrace, "Expect '{' before function/method body.")?;
+        let body = self.block();
+        return Ok(Statement::FunctionSt(FunctionStatement {
+            name,
+            params,
+            body,
+        }));
     }
 
     /// a new block/scope
@@ -418,17 +471,53 @@ impl<'a> Parser<'a> {
                 right: Box::new(self.unary()?),
             }));
         }
-        self.primary()
+        self.call()
+    }
+
+    fn finish_call(&mut self, callee: Expr) -> Result<Expr, Err> {
+        let mut arguments = Vec::new();
+        if !self.check(Type::CloseParen) {
+            loop {
+                if arguments.len() >= 255 {
+                    return Err(Err::Parser(
+                        "Can't have more than 255 arguments.".into(),
+                        self.peek().line,
+                    ));
+                }
+                arguments.push(self.expression()?);
+                if !self.expect(vec![Type::Comma]) {
+                    break;
+                } // basically do while...
+            }
+        }
+        let paren = self.consume(Type::CloseParen, "Expect ')' after arguments.")?;
+        Ok(Expr::FnCall(FnCallExpr {
+            callee: Box::new(callee),
+            paren: paren.typ.clone(),
+            arguments: arguments,
+        }))
+    }
+
+    fn call(&mut self) -> Result<Expr, Err> {
+        let mut expr = self.primary();
+        loop {
+            if self.expect(vec![Type::OpenParen]) {
+                expr = self.finish_call(expr?);
+            } else {
+                break;
+            }
+        }
+        expr
     }
 
     fn primary(&mut self) -> Result<Expr, Err> {
         self.advance();
         match &self.previous().typ {
-            Type::True => Ok(Expr::Literal(LiteralExpr::Boolean(true))),
-            Type::False => Ok(Expr::Literal(LiteralExpr::Boolean(false))),
-            Type::Nil => Ok(Expr::Literal(LiteralExpr::Nil)),
-            Type::Number(nr) => Ok(Expr::Literal(LiteralExpr::Number(*nr))),
-            Type::String(st) => Ok(Expr::Literal(LiteralExpr::String(st.clone()))),
+            Type::True => Ok(Expr::Literal(Value::Boolean(true))),
+            Type::False => Ok(Expr::Literal(Value::Boolean(false))),
+            Type::Nil => Ok(Expr::Literal(Value::Nil)),
+            Type::Number(nr) => Ok(Expr::Literal(Value::Number(*nr))),
+            Type::String(st) => Ok(Expr::Literal(Value::String(st.clone()))),
             Type::OpenParen => {
                 let expr = self.expression(); // back to the top and parse what is inside the parenthesis
                 if let Err(e) =
@@ -512,9 +601,9 @@ mod tests {
         let ast = AST::new(tokens);
 
         let expected = Expr::Binary(BinaryExpr {
-            left: Box::new(Expr::Literal(LiteralExpr::Boolean(true))),
+            left: Box::new(Expr::Literal(Value::Boolean(true))),
             token: TokenType::EqualEqual,
-            right: Box::new(Expr::Literal(LiteralExpr::Boolean(false))),
+            right: Box::new(Expr::Literal(Value::Boolean(false))),
         });
 
         let expected = vec![Ok(Statement::ExprSt(expected))];
@@ -531,12 +620,12 @@ mod tests {
         let ast = AST::new(tokens);
 
         let expected = Expr::Binary(BinaryExpr {
-            left: Box::new(Expr::Literal(LiteralExpr::Number(1.0))),
+            left: Box::new(Expr::Literal(Value::Number(1.0))),
             token: Type::Plus,
             right: Box::new(Expr::Binary(BinaryExpr {
-                left: Box::new(Expr::Literal(LiteralExpr::Number(2.0))),
+                left: Box::new(Expr::Literal(Value::Number(2.0))),
                 token: Type::Star,
-                right: Box::new(Expr::Literal(LiteralExpr::Number(3.0))),
+                right: Box::new(Expr::Literal(Value::Number(3.0))),
             })),
         });
 
@@ -556,13 +645,13 @@ mod tests {
         let expected = Expr::Binary(BinaryExpr {
             left: Box::new(Expr::Grouping(GroupingExpr {
                 expr: Box::new(Expr::Binary(BinaryExpr {
-                    left: Box::new(Expr::Literal(LiteralExpr::Number(1.0))),
+                    left: Box::new(Expr::Literal(Value::Number(1.0))),
                     token: Type::Minus,
-                    right: Box::new(Expr::Literal(LiteralExpr::Number(2.0))),
+                    right: Box::new(Expr::Literal(Value::Number(2.0))),
                 })),
             })),
             token: Type::Slash,
-            right: Box::new(Expr::Literal(LiteralExpr::Number(3.0))),
+            right: Box::new(Expr::Literal(Value::Number(3.0))),
         });
 
         let expected = vec![Ok(Statement::ExprSt(expected))];

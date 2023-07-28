@@ -1,5 +1,7 @@
 use std::fmt;
 
+use crate::expressions::Expr;
+
 /*
     Basic collection types that get passed arround between module-borders.
 */
@@ -13,6 +15,7 @@ pub enum Err {
     Parser(String, usize),
     Lexer(String, usize),
     Interpreter(String, usize),
+    ReturnValue(Expr),
 }
 impl std::fmt::Display for Err {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -26,6 +29,7 @@ impl std::fmt::Display for Err {
             Err::Interpreter(message, line) => f.write_fmt(format_args!(
                 "Interpreter-ERROR in line: {line} : {message}!"
             )),
+            Err::ReturnValue(value) => f.write_fmt(format_args!("Return: {value}")),
         }
     }
 }

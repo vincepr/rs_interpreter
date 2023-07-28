@@ -12,7 +12,7 @@ use std::rc::Rc;
 
 use crate::{
     environment::Environment,
-    expressions::Expr,
+    expressions::{Expr, Function, Value},
     interpreter::{execute_block, is_truthy},
     types::Err,
 };
@@ -32,6 +32,18 @@ pub enum Statement {
         condition: Expr,
         body: Box<Statement>,
     },
+    FunctionSt(FunctionStatement),
+    ReturnSt {
+        keyword: String,
+        value: Expr,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FunctionStatement {
+    pub name: String,
+    pub params: Vec<String>,
+    pub body: Vec<Result<Statement, Err>>,
 }
 
 impl Statement {
@@ -52,8 +64,35 @@ impl Statement {
             Self::While { condition, body } => {
                 execute_while_statement(condition, *body, current_env)
             }
+            Self::FunctionSt(fn_st) => execute_function_statement(fn_st, current_env),
+            Self::ReturnSt { keyword, value } => {
+                execute_return_statement(keyword, value, current_env)
+            }
         }
     }
+}
+
+fn execute_return_statement(
+    _keyword: String,
+    value: Expr,
+    env: Rc<Environment>,
+) -> Result<(), Err> {
+    let mut return_val = Expr::Literal(Value::Nil);
+    if value != Expr::Literal(Value::Nil) {
+        return_val = value.evaluated(env)?;
+    }
+    Err(Err::ReturnValue(return_val))
+}
+
+/// a function is declared 'fun name(...params){ ...body; }'
+fn execute_function_statement(fn_st: FunctionStatement, env: Rc<Environment>) -> Result<(), Err> {
+    let FunctionStatement { name, .. } = fn_st.clone();
+    let function = Expr::Literal(Value::Callable(Rc::new(Function::Declared {
+        function_st: fn_st,
+        closure: Rc::clone(&env),
+    })));
+    env.define(name, function);
+    Ok(())
 }
 
 fn execute_while_statement(
@@ -93,7 +132,7 @@ fn execute_block_statement(
     statements: Vec<Result<Statement, Err>>,
     env: Rc<Environment>,
 ) -> Result<(), Err> {
-    execute_block(env, statements);
+    let _ = execute_block(env, statements); // it is only possible to return from functions in lox
     Ok(())
 }
 

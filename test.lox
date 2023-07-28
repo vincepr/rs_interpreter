@@ -1,12 +1,37 @@
-// using this file while developing *make run* - automatically runs this file
+// // using this file while developing *make run* - automatically runs this file
+// var timer = clock();  
+// fun loopi() {
+//   var x = 100;
+//   while (x>0) {
+//     var temp = x /123.124;
+//     temp = temp / 1252345.43;   
+//     if (x<50) print x;
+//     x = x-10;
+//   }
+// }
+// print loopi();  // functions that return implicit nil work just fine
 
-var x = 100;
-while (x>0) {
-  if (x<50) print x;
-  x = x-10;
+// fun loopii() {
+//   for (var i=0; i<5; i=i+1) print i;
+//   return 12;
+// }
+
+// print "time it took: "+ (timer - clock());  
+// print loopii();
+// print loopii(); 
+
+
+// test for closures
+fun makeCounter() {
+  var i = 0;
+  fun count() {
+    i = i + 1;
+    print i;
+  }
+
+  return count;
 }
 
-// expect: 40
-// expect: 30
-// expect: 20
-// expect: 10
+var counter = makeCounter();
+counter(); // expect: 1
+counter(); // expect: 2
