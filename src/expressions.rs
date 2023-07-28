@@ -2,8 +2,9 @@ use std::rc::Rc;
 
 use crate::{
     environment::Environment,
+    interpreter::execute_block,
+    statements::{FunctionStatement, Statement},
     types::{Err, Token, TokenType},
-    statements::{Statement, FunctionStatement}, interpreter::execute_block
 };
 
 // Collection of all Expressions. They are the building blocks of our AST
@@ -93,17 +94,21 @@ pub enum Function {
         func: fn() -> Result<Value, Err>,
     },
     Declared {
-        functionSt:FunctionStatement,
+        function_st: FunctionStatement,
+        closure: Rc<Environment>,
     },
 }
 impl Function {
     pub fn arity(&self) -> usize {
         match self {
             Function::Native { arity, func: _ } => *arity,
-            Function::Declared { functionSt} => {
-                let FunctionStatement{ name, params, body }=functionSt;
+            Function::Declared {
+                function_st,
+                closure: _,
+            } => {
+                let FunctionStatement { name, params, body } = function_st;
                 return params.len();
-            },
+            }
         }
     }
     pub fn call(
@@ -116,10 +121,17 @@ impl Function {
                 // call() on Native functions just execuates the callback we stored in our map
                 return Ok(Expr::Literal(func()?));
             }
-            Function::Declared { functionSt } => {
+            Function::Declared {
+                function_st,
+                closure,
+            } => {
                 // call() on Normal Functions (not Methods etc.)
-                let FunctionStatement{name, params, body} = functionSt;
-                let this_env = Rc::new(Environment::new(Some(env))); // create new local-env for this function
+                let FunctionStatement {
+                    name: _,
+                    params,
+                    body,
+                } = function_st;
+                let this_env = Rc::new(Environment::new(Some(Rc::clone(closure)))); // create new local-env for this function
                 for i in 0..params.len() {
                     // we take arguments and write them to local env, so body can access them:
                     this_env.define(params[i].clone(), arguments[i].clone()?)

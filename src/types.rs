@@ -1,6 +1,6 @@
 use std::fmt;
 
-use crate::expressions::{Value, Expr};
+use crate::expressions::{Expr, Value};
 
 /*
     Basic collection types that get passed arround between module-borders.
@@ -29,7 +29,7 @@ impl std::fmt::Display for Err {
             Err::Interpreter(message, line) => f.write_fmt(format_args!(
                 "Interpreter-ERROR in line: {line} : {message}!"
             )),
-            Err::ReturnValue(value) => f.write_fmt(format_args!("Return: {value}"))
+            Err::ReturnValue(value) => f.write_fmt(format_args!("Return: {value}")),
         }
     }
 }

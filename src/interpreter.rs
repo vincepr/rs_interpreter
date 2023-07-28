@@ -13,7 +13,7 @@ use crate::{
 /// Takes the root of the AST and evaluates it down to a result.
 pub fn interpret(inputs: Vec<Result<Statement, Err>>) {
     // envirnoment that holds reference to all variable-names-> values mapped:
-    let global_scope= build_global_scope();
+    let global_scope = build_global_scope();
 
     for statement in inputs {
         exececute(global_scope.clone(), statement);
@@ -140,7 +140,6 @@ impl FnCallExpr {
             match function.call(env.clone(), arguments) {
                 Err(Err::ReturnValue(return_val)) => return Ok(return_val),
                 res => return res,
-                
             }
         }
         return Err(Err::Interpreter(

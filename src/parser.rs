@@ -5,7 +5,7 @@ use crate::{
         BinaryExpr, Expr, FnCallExpr, GroupingExpr, LogicalExpr, UnaryExpr, Value, VarAssignExpr,
         VarReadExpr,
     },
-    statements::{Statement, FunctionStatement},
+    statements::{FunctionStatement, Statement},
     types::{Err, Token, TokenType as Type},
 };
 
@@ -277,7 +277,7 @@ impl<'a> Parser<'a> {
         _ = self.consume(Type::Semicolon, "Expected ; after value.")?;
         return Ok(Statement::PrintSt(value));
     }
-    
+
     fn return_statement(&mut self) -> Result<Statement, Err> {
         let keyword = self.previous().lexeme.to_string();
         let mut value = Expr::Literal(Value::Nil);
@@ -295,8 +295,11 @@ impl<'a> Parser<'a> {
     }
 
     fn function(&mut self) -> Result<Statement, Err> {
-        let name = self.consume(Type::Identifier, "Expect function/method name.")?.lexeme.to_string();
-        
+        let name = self
+            .consume(Type::Identifier, "Expect function/method name.")?
+            .lexeme
+            .to_string();
+
         self.consume(Type::OpenParen, "Expect '(' after function/method name.");
 
         let mut params = Vec::new();
@@ -322,8 +325,11 @@ impl<'a> Parser<'a> {
         self.consume(Type::CloseParen, "Expect ')' after parameters.");
         self.consume(Type::OpenBrace, "Expect '{' before function/method body.");
         let body = self.block();
-        return Ok(Statement::FunctionSt(FunctionStatement{ name, params, body }) );
-
+        return Ok(Statement::FunctionSt(FunctionStatement {
+            name,
+            params,
+            body,
+        }));
     }
 
     /// a new block/scope

@@ -12,7 +12,7 @@ use std::rc::Rc;
 
 use crate::{
     environment::Environment,
-    expressions::{Expr, Function, Value, FnCallExpr},
+    expressions::{Expr, FnCallExpr, Function, Value},
     interpreter::{execute_block, is_truthy},
     types::Err,
 };
@@ -40,7 +40,7 @@ pub enum Statement {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct FunctionStatement{
+pub struct FunctionStatement {
     pub name: String,
     pub params: Vec<String>,
     pub body: Vec<Result<Statement, Err>>,
@@ -65,12 +65,14 @@ impl Statement {
                 execute_while_statement(condition, *body, current_env)
             }
             Self::FunctionSt(fn_st) => execute_function_statement(fn_st, current_env),
-            Self::ReturnSt { keyword, value } => execute_return_statement(keyword, value, current_env),
+            Self::ReturnSt { keyword, value } => {
+                execute_return_statement(keyword, value, current_env)
+            }
         }
     }
 }
 
-fn execute_return_statement(keyword:String, value:Expr, env:Rc<Environment>) -> Result<(), Err>{
+fn execute_return_statement(keyword: String, value: Expr, env: Rc<Environment>) -> Result<(), Err> {
     let mut return_val = Expr::Literal(Value::Nil);
     if value != Expr::Literal(Value::Nil) {
         return_val = value.evaluated(env)?;
@@ -80,8 +82,11 @@ fn execute_return_statement(keyword:String, value:Expr, env:Rc<Environment>) -> 
 
 /// a function is declared 'fun name(...params){ ...body; }'
 fn execute_function_statement(fn_st: FunctionStatement, env: Rc<Environment>) -> Result<(), Err> {
-    let FunctionStatement{name, ..} = fn_st.clone();
-    let function = Expr::Literal(Value::Callable(Rc::new(Function::Declared { functionSt:fn_st })));
+    let FunctionStatement { name, .. } = fn_st.clone();
+    let function = Expr::Literal(Value::Callable(Rc::new(Function::Declared {
+        function_st: fn_st,
+        closure: Rc::clone(&env),
+    })));
     env.define(name, function);
     Ok(())
 }
