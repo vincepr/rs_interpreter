@@ -1,37 +1,37 @@
-// using this file while developing *make run* - automatically runs this file
-var timer = clock();  
-fun loopi() {
-  var x = 100;
-  while (x>0) {
-    var tem = x /123.124;
-    //temp = temp / 1252345.43;   // scope seem out of wack! cant reach temp here. undefined
-    if (x<50) print x;
-    x = x-10;
-  }
-}
-print loopi();  // functions that return implicit nil work just fine
-
-fun loopii() {
-  for (var i=0; i<5; i=i+1) print i;
-  return 12;
-}
-
-print "time it took: "+ (timer - clock());  
-print loopii();
-print loopii(); // never gets reached. My guess is the Error we return as Err::ReturnValue propagates up!
-
-
-// // test for closures
-// fun makeCounter() {
-//   var i = 0;
-//   fun count() {
-//     i = i + 1;
-//     print i;
+// // using this file while developing *make run* - automatically runs this file
+// var timer = clock();  
+// fun loopi() {
+//   var x = 100;
+//   while (x>0) {
+//     var temp = x /123.124;
+//     temp = temp / 1252345.43;   
+//     if (x<50) print x;
+//     x = x-10;
 //   }
+// }
+// print loopi();  // functions that return implicit nil work just fine
 
-//   return count;
+// fun loopii() {
+//   for (var i=0; i<5; i=i+1) print i;
+//   return 12;
 // }
 
-// var counter = makeCounter();
-// counter(); // expect: 1
-// counter(); // expect: 2
+// print "time it took: "+ (timer - clock());  
+// print loopii();
+// print loopii(); 
+
+
+// test for closures
+fun makeCounter() {
+  var i = 0;
+  fun count() {
+    i = i + 1;
+    print i;
+  }
+
+  return count;
+}
+
+var counter = makeCounter();
+counter(); // expect: 1
+counter(); // expect: 2

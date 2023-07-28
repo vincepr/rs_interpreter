@@ -16,7 +16,7 @@ pub fn interpret(inputs: Vec<Result<Statement, Err>>) {
     let global_scope = build_global_scope();
 
     for statement in inputs {
-        exececute(global_scope.clone(), statement);
+        exececute(global_scope.clone(), statement).unwrap();    // this will panic when we return at top level, maybe give it a proper err msg
     }
 }
 
@@ -48,31 +48,37 @@ fn get_epoch_ms() -> f64 {
         Statements Execute, always end with a ;
 */
 
-fn exececute(scope: Rc<Environment>, statement: Result<Statement, Err>) {
+fn exececute(scope: Rc<Environment>, statement: Result<Statement, Err>) -> Result<(), Err> {
     match statement {
         Ok(st) => {
             // after trying execution we check if we hit an runtime error, if so we print then abort
             if let Err(e) = st.execute(scope) {
+                if let Err::ReturnValue(value) = e.clone() {
+                    return Err(Err::ReturnValue(value));    // return values use this unwind up to the next FunctionCall
+                }
                 println!("{e}");
                 std::process::exit(1);
             };
+            Ok(())
         }
         Result::Err(e) => {
             // We hit a parsing error and print that out: (since the statement was wrong we cant even try to execute it)
             println!("{e}");
             std::process::exit(1);
         }
+
     }
 }
 
 /// gets called from Statements-'visitorpattern'
-pub fn execute_block(parent_scope: Rc<Environment>, statements: Vec<Result<Statement, Err>>) {
+pub fn execute_block(parent_scope: Rc<Environment>, statements: Vec<Result<Statement, Err>>) -> Result<(), Err> {
     // create the new Scope:
     let local_scope = Rc::new(Environment::new(Some(parent_scope)));
 
     for statement in statements {
-        exececute(local_scope.clone(), statement);
+        exececute(local_scope.clone(), statement)?;     // we pass the return value up
     }
+    Ok(())
 }
 
 /*

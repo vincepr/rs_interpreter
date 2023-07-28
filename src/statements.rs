@@ -72,7 +72,7 @@ impl Statement {
     }
 }
 
-fn execute_return_statement(keyword: String, value: Expr, env: Rc<Environment>) -> Result<(), Err> {
+fn execute_return_statement(_keyword: String, value: Expr, env: Rc<Environment>) -> Result<(), Err> {
     let mut return_val = Expr::Literal(Value::Nil);
     if value != Expr::Literal(Value::Nil) {
         return_val = value.evaluated(env)?;

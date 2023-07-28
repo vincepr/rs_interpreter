@@ -127,7 +127,7 @@ impl Function {
             } => {
                 // call() on Normal Functions (not Methods etc.)
                 let FunctionStatement {
-                    name: _,
+                    name: _name,
                     params,
                     body,
                 } = function_st;
@@ -136,8 +136,11 @@ impl Function {
                     // we take arguments and write them to local env, so body can access them:
                     this_env.define(params[i].clone(), arguments[i].clone()?)
                 }
-                execute_block(this_env, body.clone());
-                return Ok(Expr::Literal(Value::Nil));
+                // we catch the upcoming return value wrapped in an error
+                if let Err(Err::ReturnValue(val))= execute_block(this_env, body.clone()){
+                    return Ok(val);
+                }
+                return Ok(Expr::Literal(Value::Nil));   // or use default nil if no return value
             }
         }
     }
